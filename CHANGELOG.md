@@ -1,5 +1,10 @@
 # Cambios
 
+## v1.6.2 — 2026-11-12
+
+- Deslizar entre pestañas en el móvil, como en las redes sociales: la pestaña sigue al dedo, la de al lado asoma por
+  el borde y al soltar se completa con una animación (o vuelve si no has deslizado bastante).
+
 ## v1.6.1 — 2026-11-12
 
 - Sincronizar PC ↔ móvil: el aviso "ordenar a medias" ya no reaparece en un dispositivo cuando el otro ya terminó

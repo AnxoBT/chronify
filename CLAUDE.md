@@ -282,8 +282,9 @@ dispositivo con Chronify (puede haber un emulador conectado).
 ## Publicar
 
 Repo público. **Nada personal en el repo**: ni `rules.json`, ni caché, ni nombres de otras personas; commits con el
-email noreply de GitHub. Móvil: deslizar a los lados cambia de pestaña (`base.js`, no en el mapa ni en tablas
-desplazables).
+email noreply de GitHub. Móvil: deslizar a los lados cambia de pestaña con transición interactiva (`base.js`: la sección sigue al dedo y la
+vecina asoma con `section.asomando`; se completa al pasar el 35 % del ancho o con un gesto rápido; no en el mapa ni en
+tablas desplazables).
 
 ## Hoja de ruta
 

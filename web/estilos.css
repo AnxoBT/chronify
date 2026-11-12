@@ -21,6 +21,11 @@
   nav button.on { color:var(--text); background:var(--panel2); }
   .hstat { margin-left:auto; color:var(--muted); font-size:12px; }
   section { display:none; padding:18px 0 40px; } section.on { display:block; }
+  /* deslizar entre pestañas (base.js): la de al lado asoma por el borde mientras se arrastra */
+  main { position:relative; }
+  body.deslizando { overflow-x:hidden; }
+  section.asomando { display:block; position:absolute; left:0; right:0; pointer-events:none; }
+  body.deslizando section.on, section.asomando { will-change:transform; }
   .box { background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin:10px 0; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .muted { color:var(--muted); } .small { font-size:12px; }
