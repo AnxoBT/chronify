@@ -75,6 +75,8 @@ def _elegir_estado(nombre, aqui, otro):
         return otro if otro.get("expira", 0) > aqui.get("expira", 0) else aqui
     if nombre == "spotify_bloqueo.json":  # el bloqueo que dure más
         return otro if otro.get("hasta", 0) > aqui.get("hasta", 0) else aqui
+    if nombre == "spotify_pendiente.json":  # lo apuntado más recientemente (también "ya no queda nada")
+        return otro if otro.get("m", 0) > aqui.get("m", 0) else aqui
     if nombre == "spotify_cuenta.json":  # la comprobación más reciente de la cuenta
         return otro if otro.get("t", 0) > aqui.get("t", 0) else aqui
     if nombre == "copias.json":

@@ -45,6 +45,12 @@ ART = {"activo": False, "hechos": 0, "total": 0, "actual": "", "error": None, "c
 PENDIENTE = "spotify_pendiente.json"  # listas que se quedaron a medias de ordenar (cupo, bloqueo, cancelar)
 
 
+def pendiente():
+    """Lo que queda a medias de ordenar, o None (el archivo con listas vacías = "ya no queda nada")."""
+    p = config.cache_json(PENDIENTE)
+    return p if p.get("listas") else None
+
+
 def recargar():
     with LOCK:
         R = config.rules()
@@ -149,7 +155,7 @@ def resumen():
             "orden": [{**{k: v for k, v in o.items() if k not in ("orden", "sin_verificar")},
                        "sin_verificar": len(o["sin_verificar"]), "peticiones": peticiones(o)} for o in orden],
             "fechas": {"total": len(mias), "aprox": aprox}, "cupo": spotify.cupo(),
-            "pendiente": config.cache_json(PENDIENTE) or None,
+            "pendiente": pendiente(),
             "android": bool(os.environ.get("CHRONIFY_ANDROID")), "web": ES_WEB,
             "bloqueado": (lambda h: time.strftime("%d/%m %H:%M", time.localtime(h)) if h else None)(spotify.bloqueado_hasta())}
 
@@ -306,11 +312,9 @@ def _ordenar(nombres, forzar=False):
                         break
             raise
         finally:
-            if quedan:
-                config.save_cache(PENDIENTE, {"listas": list(dict.fromkeys(quedan)), "forzar": forzar,
-                                              "t": datetime.now().strftime("%d/%m %H:%M")})
-            else:
-                config.borrar_cache(PENDIENTE)
+            # "m": cuándo se apuntó; al sincronizar gana lo más reciente (también "ya no queda nada": listas vacías)
+            config.save_cache(PENDIENTE, {"listas": list(dict.fromkeys(quedan)), "forzar": forzar, "m": time.time(),
+                                          "t": datetime.now().strftime("%d/%m %H:%M")})
         return {"hechas": hechas, "quedan": quedan, "saltadas": saltadas}
     return fn
 
@@ -432,7 +436,7 @@ def estado_spotify():
             "conectado": spotify.conectado(), "login_error": LOGIN["error"],
             "bloqueado": (lambda h: time.strftime("%d/%m %H:%M", time.localtime(h)) if h else None)(spotify.bloqueado_hasta()),
             "redirect": spotify.redirect_uri(PUERTO[0]), "prueba": config.cache_json("prueba_spotify.json") or None,
-            "cupo": spotify.cupo(), "pendiente": config.cache_json(PENDIENTE) or None,
+            "cupo": spotify.cupo(), "pendiente": pendiente(),
             "cuenta": config.cache_json(spotify.CUENTA_CACHE) or None,
             **{k: SP[k] for k in ("activo", "tarea", "log", "error")}}
 
@@ -853,7 +857,7 @@ class H(BaseHTTPRequestHandler):
                 fn = _ordenar([o["clave"] for o in analisis.ordenar(ESTADO["listas"], ESTADO["cat"])
                                if not o["fija"] and not o["ordenada"]], bool(b.get("forzar")))
             elif nombre == "seguir":
-                p = config.cache_json(PENDIENTE)
+                p = pendiente() or {}
                 if not p.get("listas"):
                     return self._send(400, {"error": "No hay nada a medias"})
                 fn = _ordenar(p["listas"], bool(p.get("forzar")))

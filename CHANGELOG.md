@@ -1,5 +1,10 @@
 # Cambios
 
+## v1.6.1 — 2026-11-12
+
+- Sincronizar PC ↔ móvil: el aviso "ordenar a medias" ya no reaparece en un dispositivo cuando el otro ya terminó
+  de ordenar (gana lo más reciente).
+
 ## v1.6.0 — 2026-11-12
 
 - **Versión web** (iPhone, iPad, Mac, Linux y cualquier navegador): la misma app, sin instalar nada, en

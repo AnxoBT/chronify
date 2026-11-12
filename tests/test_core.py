@@ -682,6 +682,16 @@ class TestPKCE(unittest.TestCase):
                 spotify.callback("codigo", state)
 
 
+class TestSincroPendiente(unittest.TestCase):
+    def test_gana_lo_mas_reciente(self):
+        from core import sincro
+        viejo = {"listas": ["Mix"], "m": 100}
+        hecho = {"listas": [], "m": 200}  # ya se terminó en el otro dispositivo
+        self.assertEqual(sincro._elegir_estado("spotify_pendiente.json", viejo, hecho), hecho)
+        self.assertEqual(sincro._elegir_estado("spotify_pendiente.json", hecho, viejo), hecho)
+        self.assertEqual(sincro._elegir_estado("spotify_pendiente.json", {"listas": ["Mix"]}, hecho), hecho)  # sin "m"
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile
