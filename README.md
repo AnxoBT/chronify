@@ -160,6 +160,12 @@ dates and artists from [MusicBrainz](https://musicbrainz.org) (CC0) · listeners
 [ListenBrainz](https://listenbrainz.org) · playlist export by [Exportify](https://exportify.app). Not affiliated with
 Spotify.
 
+### License
+
+Copyright © 2026 AnxoBT. Licensed under the [GNU General Public License v3.0](LICENSE): you can
+use, study, share and modify it, but anything you distribute that is based on this code must be
+released under the same licence, with its source code.
+
 </details>
 
 <details>
@@ -303,5 +309,11 @@ La web se publica en GitHub Pages con `.github/workflows/web.yml` en cada releas
 [Pyodide](https://pyodide.org) (MPL-2.0) · mapa de [Natural Earth](https://www.naturalearthdata.com) (dominio público) ·
 fechas y artistas de [MusicBrainz](https://musicbrainz.org) (CC0) · oyentes de [ListenBrainz](https://listenbrainz.org) ·
 exportación de listas con [Exportify](https://exportify.app). Sin relación con Spotify.
+
+### Licencia
+
+Copyright © 2026 AnxoBT. Con licencia [GNU General Public License v3.0](LICENSE): puedes usarla,
+estudiarla, compartirla y modificarla, pero lo que distribuyas basado en este código tiene que
+publicarse con la misma licencia y con su código fuente.
 
 </details>
