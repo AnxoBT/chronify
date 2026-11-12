@@ -1,0 +1,1 @@
+# Solo librería estándar de Python 3.10+. Nada que instalar.

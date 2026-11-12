@@ -1,0 +1,17 @@
+# Datos personales y generados: NUNCA al repo
+.env
+data/
+cache/
+salida/
+rules.json
+*.zip
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Herramientas locales
+.playwright-mcp/
+.claude/settings.local.json

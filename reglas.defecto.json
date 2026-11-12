@@ -1,0 +1,81 @@
+{
+  "_info": "Qué listas hay y qué tiene que cumplir cada una. Se configura en Ajustes → Tus listas. Los nombres se comparan sin tildes ni mayúsculas. Todo es opcional: sin configurar, Chronify ordena cualquier lista por fecha real.",
+  "mix": "",
+  "idiomas": [],
+  "friki": "",
+  "decadas": {},
+  "generos": [],
+  "generos_spotify": {
+    "_info": "Palabras de los géneros de Spotify (columna Genres de Exportify) que sugieren cada lista de género cuando no hay otras canciones del mismo artista para guiarse.",
+    "ROCK": [
+      "rock",
+      "metal",
+      "punk",
+      "grunge",
+      "indie",
+      "britpop",
+      "garage"
+    ],
+    "POP": [
+      "pop",
+      "latin",
+      "reggaeton",
+      "urbano",
+      "dance pop",
+      "boy band",
+      "girl group"
+    ],
+    "Electrónica": [
+      "edm",
+      "house",
+      "techno",
+      "electro",
+      "dance",
+      "trance",
+      "dubstep",
+      "eurodance",
+      "drum and bass"
+    ],
+    "Rap": [
+      "rap",
+      "hip hop",
+      "trap",
+      "drill",
+      "grime"
+    ],
+    "Chill": [
+      "chill",
+      "lo-fi",
+      "lofi",
+      "acoustic",
+      "ambient",
+      "bedroom",
+      "folk"
+    ],
+    "Jazz": [
+      "jazz",
+      "swing",
+      "bossa",
+      "blues",
+      "soul",
+      "big band",
+      "doo-wop"
+    ]
+  },
+  "no_reordenar": [],
+  "ignorar": [
+    "Saved_Albums"
+  ],
+  "solo_lectura": [
+    "Liked_Songs"
+  ],
+  "excepciones": {
+    "_info": "Ids de Spotify que no deben avisar en cada comprobación (se añaden desde la web).",
+    "sin_genero": [],
+    "sin_decada": [],
+    "fuera_de_mix": [],
+    "decada_distinta": [],
+    "version_dudosa": [],
+    "misma_cancion": []
+  }
+}

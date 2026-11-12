@@ -1,0 +1,50 @@
+# Versión web (iPhone, Mac, Linux, cualquier navegador): tests y publicación en GitHub Pages.
+# Se publica en cada release y a mano (Actions → Web → Run workflow).
+name: Web
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tests
+        run: python -m unittest discover -s tests -t .
+
+      - name: Generar la web (Pyodide se descarga de npm y se verifica con sha512)
+        run: python -m tools.generar_web _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

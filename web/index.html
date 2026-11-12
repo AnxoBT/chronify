@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chronify</title>
+<!-- iconos en mapa de bits con varios tamaños: con SVG la ventana/barra de tareas sale pixelada -->
+<link rel="icon" href="/favicon.ico?v=6" sizes="16x16 24x24 32x32 48x48 64x64 128x128 256x256">
+<link rel="icon" href="/logo-32.png?v=6" type="image/png" sizes="32x32">
+<link rel="icon" href="/logo.png?v=6" type="image/png" sizes="256x256">
+<link rel="stylesheet" href="/estilos.css">
+</head>
+<body>
+<header><div class="wrap">
+  <div class="logo"><img src="/logo.svg?v=6" alt="">Chronify</div>
+  <nav id="nav">
+    <button data-s="resumen" class="on">Resumen</button>
+    <button data-s="comprobar">Comprobaciones</button>
+    <button data-s="ordenar">Ordenar</button>
+    <button data-s="fechas">Fechas<span id="mbInd"></span></button>
+    <button data-s="stats">Estadísticas</button>
+    <button data-s="historial">Historial</button>
+    <button data-s="ajustes">Ajustes</button>
+  </nav>
+  <div class="hstat" id="hstat"></div>
+</div></header>
+
+<main class="wrap">
+  <div class="box" id="upd" style="display:none;border-color:var(--acc)"></div>
+  <div class="box banner" id="pend" style="display:none"></div>
+  <section id="resumen" class="on">
+    <div class="box">
+      <div class="row"><b>Leer listas de:</b>
+        <button class="pri" id="recargar">Zip de Exportify</button>
+        <button id="importar" title="Elegir el zip de Exportify (o un CSV) desde cualquier carpeta">Importar zip…</button>
+        <input type="file" id="importarArchivo" accept=".zip,.csv" style="display:none">
+        <span id="leerSp"></span></div>
+      <div class="muted small" style="margin-top:8px">Zip: descarga las listas con <a href="https://exportify.app" target="_blank" rel="noopener">Exportify</a>
+        (Export All → zip). En el PC se coge solo de Descargas; si no, elígelo con <i>Importar zip</i>. Funciona siempre, sin Premium. Spotify: lee directamente de tu cuenta (necesita Premium; se configura en Ajustes).
+        Leer nunca cambia nada en Spotify.</div>
+      <div id="spLog"></div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="box tabla-ancha"><table><thead><tr><th>Lista</th><th>Canciones</th><th>Archivo</th><th>Descargado</th></tr></thead><tbody id="tlistas"></tbody></table></div>
+    <p class="muted small" id="carpetas"></p>
+  </section>
+
+  <section id="comprobar"><div id="avisos"></div></section>
+
+  <section id="ordenar">
+    <div class="box" id="ordTodas"></div>
+    <div class="box row">
+      <button class="pri" id="guardarTxt">Guardar todos los txt en salida/</button>
+      <span class="muted small">Copia el txt, en Spotify selecciona todo en la lista (Ctrl+A), bórralo y pega (Ctrl+V).
+        Las listas marcadas como "no reordenar" (Ajustes → Tus listas) no se tocan, para no perder el orden en que añades.</span>
+    </div>
+    <div class="box" id="spLogOrd" style="display:none"></div>
+    <div class="box"><table><thead><tr><th>Lista</th><th>Estado</th><th></th></tr></thead><tbody id="tordenar"></tbody></table></div>
+  </section>
+
+  <section id="fechas">
+    <div class="box row">
+      <select id="filtro"><option value="aprox">Aproximadas / sin verificar</option><option value="nuevas">Nuevas (no están en fechas.json)</option><option value="todas">Todas</option></select>
+      <button id="mbBuscar">Buscar en MusicBrainz las mostradas</button>
+      <button id="mbCancelar" disabled>Cancelar</button>
+      <span class="muted small" id="mbProg"></span>
+    </div>
+    <div class="box" id="mbBarra" style="display:none">
+      <div class="row"><b id="mbTitulo">Buscando en MusicBrainz…</b><span class="muted small" id="mbQueda"></span></div>
+      <div class="barra"><div id="mbRelleno"></div></div>
+      <div class="muted small" id="mbActual"></div>
+    </div>
+    <div class="box" id="mbRes" style="display:none"></div>
+    <div class="box"><table><thead><tr><th>Canción</th><th>Fecha</th><th>Fuente</th><th>Spotify</th><th></th></tr></thead><tbody id="tfechas"></tbody></table></div>
+  </section>
+
+  <section id="stats">
+    <div class="box row">
+      <b>Lista:</b> <select id="stLista"></select>
+      <span id="stArt" class="small"></span>
+    </div>
+    <div id="stCuerpo"><div class="muted">Calculando…</div></div>
+  </section>
+
+  <section id="historial">
+    <div class="box"><div class="muted small">Cambios de fechas, países de artistas, excepciones y acciones en Spotify (lo más reciente arriba).
+      Los cambios de fecha y de país se pueden deshacer.</div></div>
+    <div class="box"><table><thead><tr><th>Cuándo</th><th>Qué</th><th></th></tr></thead><tbody id="thist"></tbody></table></div>
+  </section>
+
+  <section id="ajustes">
+    <div class="box" id="tusListas">
+      <h3 style="margin:0 0 10px">Tus listas</h3>
+      <div class="muted small ayuda" style="margin-bottom:10px">Opcional. Sin configurar nada, Chronify ordena cualquier lista
+        por la fecha real de sus canciones. Si le dices qué es cada lista, además comprueba que cuadran entre sí. Ejemplo:
+        una lista <b>Mix</b> con todo, formada por <b>Español</b> + <b>Inglés</b> (que conservan el orden en que añades, así
+        que se marcan "no reordenar"); épocas <b>Retro</b> (hasta 1999), <b>2000s</b> (2000–2009) y <b>2010s</b> (desde
+        2010): cada canción del Mix en una sola; y géneros (<b>POP</b>, <b>ROCK</b>…): cada canción del Mix en al menos uno.</div>
+      <div class="tabla-ancha"><table><thead><tr><th>Lista</th><th>Canciones</th><th>Qué es</th><th>Años</th>
+        <th title="Conserva el orden en que añades las canciones: Chronify nunca la reordena">No reordenar</th></tr></thead>
+        <tbody id="tlListas"></tbody></table></div>
+      <div class="row" style="margin-top:10px"><button class="pri" id="tlGuardar">Guardar</button>
+        <span class="muted small" id="tlEstado"></span></div>
+    </div>
+    <div class="box">
+      <h3 style="margin:0 0 10px">Cuenta de Spotify (opcional, necesita Premium)</h3>
+      <div class="row"><span class="muted etq">Client ID</span>
+        <input id="cid" size="40" autocomplete="off"><button id="cidGuardar">Guardar</button></div>
+      <div class="row" style="margin-top:8px"><span class="muted etq">Redirect URI</span>
+        <code id="redirect"></code><button class="mini" id="redirectCopiar">copiar</button></div>
+      <div class="muted small ayuda">En <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>
+        → tu app → Settings: pega esa Redirect URI exacta y marca Web API.</div>
+      <div class="row" style="margin-top:12px"><span class="muted etq">Estado</span><span id="spEstado"></span>
+        <a href="/spotify/login" id="spConectar"><button class="pri">Conectar con Spotify</button></a>
+        <button id="spDesconectar">Desconectar</button></div>
+      <div id="spLoginError" class="error small ayuda"></div>
+      <div class="row" style="margin-top:12px"><span class="muted etq">Prueba</span>
+        <button id="spProbar">Probar en lista desechable</button><span id="spPrueba"></span></div>
+      <div class="muted small ayuda">Crea una lista privada «Chronify prueba» con 4 canciones, las reordena, comprueba si se
+        conserva la fecha de añadido y la borra. No toca ninguna de tus listas.</div>
+    </div>
+    <div class="box">
+      <h3 style="margin:0 0 10px">Exportify</h3>
+      <div class="row"><span class="muted etq">Carpetas</span>
+        <input id="dataDir" size="70"><button id="dataGuardar">Guardar</button></div>
+      <div class="muted small ayuda">Dónde buscar el zip o los CSV (varias separadas por «;»). Vacío = Descargas y ./data.</div>
+    </div>
+    <div class="box">
+      <h3 style="margin:0 0 10px">Actualizaciones</h3>
+      <div class="row"><span class="muted etq">Versión</span><b id="verActual"></b><span id="verEstado"></span>
+        <button id="verBuscar">Buscar actualizaciones</button></div>
+      <div class="row" style="margin-top:10px"><span class="muted etq">Token GitHub</span>
+        <input id="ghToken" size="50" autocomplete="off" type="password"><button id="ghGuardar">Guardar</button></div>
+      <div class="muted small ayuda">Opcional: Chronify consulta las versiones nuevas en GitHub sin token. Si alguna vez
+        GitHub limita las consultas, pega aquí un token de solo lectura
+        (<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">crear token</a>,
+        sin permisos especiales).</div>
+    </div>
+    <div class="box">
+      <h3 style="margin:0 0 10px">Sincronizar PC ↔ móvil</h3>
+      <div class="row"><span class="muted etq">Estado</span><span id="sincEstado" class="small"></span>
+        <button id="sincAhora">Sincronizar con el móvil</button></div>
+      <div class="muted small ayuda" id="sincAyuda">Conecta el móvil al PC por USB (con la depuración USB activada) y pulsa el botón:
+        junta las fechas, reglas, excepciones, países de artistas y el límite diario de Spotify de los dos, y le pasa al móvil
+        el zip de Exportify más reciente. Va por el cable: tus datos no salen de tus dispositivos. Si cambias la misma canción
+        en los dos, gana el cambio más reciente.</div>
+    </div>
+    <div class="box" id="copiaBox">
+      <h3 style="margin:0 0 10px">Copia de seguridad</h3>
+      <div class="row"><span class="muted etq">Última</span><span id="copiaEstado" class="small"></span>
+        <button id="copiaAhora">Hacer copia ahora</button>
+        <button id="copiaRestaurar" title="Recuperar tus datos de una copia (de este u otro dispositivo)">Restaurar copia…</button>
+        <input type="file" id="copiaArchivo" accept=".zip" style="display:none"></div>
+      <div class="muted small ayuda">Guarda lo que no está en GitHub: .env, caché (sesión de Spotify, búsquedas de MusicBrainz,
+        historial), tus zips de Exportify y la clave con la que se firma el APK (sin ella el móvil no podría actualizarse
+        sin desinstalar). Se hace sola cada semana al abrir Chronify; se guardan las 5 últimas.
+        Tiene datos privados: no la subas a ningún sitio público.</div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+<div id="tip"></div>
+
+<script src="/js/base.js"></script>
+<script src="/js/graficas.js"></script>
+<script src="/js/estadisticas.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/inicio.js"></script>
+</body>
+</html>
