@@ -168,6 +168,21 @@
         el zip de Exportify más reciente. Va por el cable: tus datos no salen de tus dispositivos. Si cambias la misma canción
         en los dos, gana el cambio más reciente.</div>
     </div>
+    <div class="box" id="wifiBox">
+      <h3 style="margin:0 0 10px">Sincronizar por Wi-Fi</h3>
+      <div class="muted small ayuda" style="margin-bottom:10px">En casa y sin cable: igual que por USB, junta los datos de los
+        dos dispositivos (y pasa la versión nueva de la app al móvil). Uno espera y el otro se conecta con la dirección y el
+        código que enseña. Mejor que espere el móvil y conecte el PC.</div>
+      <div class="row"><button id="wfEsperar">Esperar conexión (2 min)</button></div>
+      <div id="wfEspera"></div>
+      <div class="row" style="margin-top:10px"><span class="muted etq">Conectar a</span>
+        <input id="wfDir" placeholder="192.168.1.20:8767" size="20" autocomplete="off">
+        <input id="wfCodigo" placeholder="código" size="13" autocomplete="off" autocapitalize="characters">
+        <button class="pri" id="wfConectar">Sincronizar</button></div>
+      <div id="wfEstado" class="small" style="margin-top:8px"></div>
+      <div class="muted small ayuda" style="margin-top:8px">Todo va cifrado con el código, que solo sirve una vez y durante esos
+        2 minutos; con 5 intentos fallidos se cierra. Úsalo en tu Wi-Fi de casa, no en redes públicas.</div>
+    </div>
     <div class="box" id="copiaBox">
       <h3 style="margin:0 0 10px">Copia de seguridad</h3>
       <div class="row"><span class="muted etq">Última</span><span id="copiaEstado" class="small"></span>

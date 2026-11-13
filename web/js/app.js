@@ -594,3 +594,45 @@ async function mostrarNovedades() {
 }
 $("#nvCerrar").onclick = () => $("#novedades").classList.remove("on");
 mostrarNovedades();
+
+// ── sincronizar por Wi-Fi (core/wifi.py): uno espera con dirección + código, el otro conecta ──
+let WIFI_VIGILAR = false;
+async function pintarWifi() {
+  let w;
+  try { w = await api("/api/wifi"); } catch (e) { return; }
+  if (w.web) { $("#wifiBox").style.display = "none"; return; }
+  $("#wfEsperar").textContent = traducirTexto(w.esperando ? "Cancelar" : "Esperar conexión (2 min)");
+  $("#wfEsperar").className = w.esperando ? "" : "pri";
+  $("#wfEspera").replaceChildren(w.esperando ? el("div", {className:"codigoWifi"},
+    el("div", {}, el("span", {className:"muted small"}, "Dirección"), el("b", {}, w.direccion)),
+    el("div", {}, el("span", {className:"muted small"}, "Código"), el("b", {}, w.codigo)),
+    el("div", {className:"muted small"}, traducirTexto(`Escríbelos en el otro dispositivo · quedan ${w.quedan} s`))) : "");
+  $("#wfConectar").disabled = w.conectando || w.esperando;
+  const res = w.resultado;
+  $("#wfEstado").replaceChildren(
+    w.conectando ? el("span", {className:"tag info"}, "Sincronizando…") : "",
+    w.log.length && (w.conectando || w.error) ? el("pre", {className:"muted small", style:"white-space:pre-wrap;margin:6px 0 0"}, w.log.join("\n")) : "",
+    w.error ? el("div", {className:"error"}, w.error) : "",
+    res && !w.conectando ? el("div", {}, el("span", {className:"tag ok"}, "Sincronizado"), ` ${res.t} · `,
+      traducirTexto(`aquí: ${res.aqui.length ? res.aqui.join(", ") : "nada nuevo"} · allí: ${res.alli.length ? res.alli.join(", ") : "nada nuevo"}`)) : "",
+    w.apk_listo && E && E.android ? el("div", {style:"margin-top:8px"}, el("button", {className:"pri", onclick: () => { location.href = "/android/instalar"; }},
+      traducirTexto(`Instalar Chronify v${w.apk_listo}`))) : "");
+  const vivo = w.esperando || w.conectando;
+  if (vivo) { WIFI_VIGILAR = true; setTimeout(pintarWifi, 1000); }
+  else if (WIFI_VIGILAR) { WIFI_VIGILAR = false; if (res) { cargar(); toast(traducirTexto("Sincronizado por Wi-Fi")); } }
+}
+$("#wfEsperar").onclick = async () => {
+  try {
+    const w = await api("/api/wifi");
+    await api(w.esperando ? "/api/wifi/parar" : "/api/wifi/esperar", {});
+  } catch (e) { toast(e.message); }
+  pintarWifi();
+};
+$("#wfConectar").onclick = async () => {
+  const direccion = $("#wfDir").value.trim(), codigo = $("#wfCodigo").value.trim();
+  try { localStorage.setItem("chronify_wifi_dir", direccion); } catch (e) {}
+  try { await api("/api/wifi/conectar", {direccion, codigo}); $("#wfCodigo").value = ""; } catch (e) { toast(e.message); }
+  pintarWifi();
+};
+try { $("#wfDir").value = localStorage.getItem("chronify_wifi_dir") || ""; } catch (e) {}
+document.querySelector('#nav button[data-s="ajustes"]').addEventListener("click", pintarWifi);

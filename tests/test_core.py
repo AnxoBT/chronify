@@ -790,6 +790,62 @@ class TestNovedades(unittest.TestCase):
         self.assertNotIn("  ", actualizar.novedades("0.0.1", "es", hasta="1.0.0")[0]["puntos"][0])  # líneas unidas
 
 
+class TestWifi(unittest.TestCase):
+    def test_cifrado(self):
+        from core import cifrado
+        codigo = cifrado.codigo_nuevo()
+        self.assertEqual(len(cifrado.normalizar(codigo)), 10)
+        ks = cifrado.claves(codigo.lower(), b"s" * 16)  # da igual mayúsculas y guion
+        datos = bytes(range(256)) * 300
+        p = cifrado.sellar(ks, b"c", datos)
+        self.assertNotIn(datos[:64], p)  # no viaja en claro
+        self.assertEqual(cifrado.abrir(ks, b"c", p), datos)
+        with self.assertRaises(ValueError):  # al revés (respuesta usada como petición)
+            cifrado.abrir(ks, b"s", p)
+        alterado = bytearray(p); alterado[-1] ^= 1
+        with self.assertRaises(ValueError):
+            cifrado.abrir(ks, b"c", bytes(alterado))
+        with self.assertRaises(ValueError):  # otro código
+            cifrado.abrir(cifrado.claves("AAAAA-AAAAA", b"s" * 16), b"c", p)
+
+    def test_sincronizar_de_verdad(self):
+        """Dos Chronify en este PC (uno espera y otro conecta) por una conexión de red real."""
+        from unittest import mock
+        from core import sincro, wifi
+        recibido = []
+        mios = {"lado": "conecta"}
+        with mock.patch.object(sincro, "datos", lambda: dict(mios)),              mock.patch.object(sincro, "recibir", lambda d: recibido.append(d) or ["fechas"]),              mock.patch.object(sincro, "zip_reciente", lambda: (None, 0)),              mock.patch.object(wifi, "ip_local", lambda: "127.0.0.1"):
+            e = wifi.esperar()
+            try:
+                self.assertTrue(e["esperando"])
+                with self.assertRaises(RuntimeError):  # código equivocado
+                    wifi.conectar(e["direccion"], "ZZZZZ-ZZZZZ", log=lambda m: None)
+                self.assertEqual(wifi.ESTADO["fallos"], 1)
+                res = wifi.conectar(e["direccion"], e["codigo"], log=lambda m: None)
+            finally:
+                wifi.parar()
+        self.assertEqual(res["aqui"], ["fechas"])
+        self.assertEqual(res["alli"], ["fechas"])
+        self.assertEqual(len(recibido), 2)  # cada lado recibió los datos del otro
+        self.assertFalse(wifi.ESTADO["esperando"])  # tras sincronizar se cierra sola
+
+    def test_se_cierra_con_intentos_fallidos(self):
+        from unittest import mock
+        from core import wifi
+        with mock.patch.object(wifi, "ip_local", lambda: "127.0.0.1"):
+            e = wifi.esperar()
+            try:
+                for _ in range(wifi.MAX_FALLOS):
+                    with self.assertRaises(RuntimeError):
+                        wifi.conectar(e["direccion"], "ZZZZZ-ZZZZZ", log=lambda m: None)
+                import time
+                time.sleep(0.5)
+                self.assertFalse(wifi.ESTADO["esperando"])
+                self.assertIn("intentos", wifi.ESTADO["error"])
+            finally:
+                wifi.parar()
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile

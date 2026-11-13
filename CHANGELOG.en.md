@@ -2,6 +2,13 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.2.0 — 2026-11-13
+
+- **Sync over Wi-Fi** (Settings), at home and without a cable: one device waits and shows its address and a code, and
+  the other connects. It does the same as over USB: merges both devices' data both ways, passes the newer Exportify
+  zip and the new app version to the phone. Everything is encrypted with the code, which only works once and for 2
+  minutes.
+
 ## v1.1.0 — 2026-11-13
 
 - **What's new after updating**: the first time you open Chronify after an update, a window sums up what changed

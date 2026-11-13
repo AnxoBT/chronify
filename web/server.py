@@ -690,6 +690,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, historial.leer())
         if u.path == "/api/spotify":
             return self._send(200, estado_spotify())
+        if u.path == "/api/wifi":  # sincronizar por Wi-Fi: espera abierta, progreso y resultado
+            from core import wifi
+            return self._send(200, {**wifi.estado(), "web": ES_WEB})
         if u.path == "/api/novedades":  # ?desde=1.0.0&idioma=en → cambios desde esa versión (aviso tras actualizar)
             from core import actualizar
             return self._send(200, actualizar.novedades(q.get("desde", VERSION), q.get("idioma", "es")))
@@ -845,6 +848,34 @@ class H(BaseHTTPRequestHandler):
                 nombre, datos = copia.en_memoria()
                 return self._send(200, datos, "application/zip", {"Content-Disposition": f'attachment; filename="{nombre}"'})
             return self._send(200, copia.crear())
+        if u.path in ("/api/wifi/esperar", "/api/wifi/parar", "/api/wifi/conectar"):
+            from core import wifi
+            if ES_WEB:
+                return self._send(400, {"error": "En la web no se puede sincronizar por Wi-Fi: usa la copia de seguridad"})
+            if u.path.endswith("/parar"):
+                wifi.parar()
+                return self._send(200, wifi.estado())
+            if wifi.ESTADO["conectando"]:
+                return self._send(409, {"error": "Ya hay una sincronización por Wi-Fi en marcha"})
+            if u.path.endswith("/esperar"):
+                try:
+                    return self._send(200, wifi.esperar())
+                except RuntimeError as e:
+                    return self._send(400, {"error": str(e)})
+            direccion, codigo = str(b.get("direccion") or "").strip(), str(b.get("codigo") or "")
+            if not direccion or len(wifi.cifrado.normalizar(codigo)) != 10:
+                return self._send(400, {"error": "Escribe la dirección y el código de 10 caracteres que enseña el otro dispositivo"})
+            wifi.ESTADO.update(conectando=True, log=[], error=None, resultado=None)
+
+            def tarea():
+                try:
+                    wifi.ESTADO["resultado"] = wifi.conectar(direccion, codigo, wifi.ESTADO["log"].append)
+                except Exception as e:  # noqa: BLE001
+                    wifi.ESTADO["error"] = str(e)
+                finally:
+                    wifi.ESTADO["conectando"] = False
+            threading.Thread(target=tarea, daemon=True).start()
+            return self._send(200, {"ok": True})
         if u.path == "/api/sincronizar":
             if os.environ.get("CHRONIFY_ANDROID") or ES_WEB:
                 return self._send(400, {"error": "Se sincroniza desde el Chronify del PC con el móvil conectado por USB"})
@@ -924,6 +955,14 @@ def _vigilar(srv):
             print("Ventana cerrada: apagando Chronify")
             srv.shutdown()
             return
+
+
+def _ganchos_wifi():  # la sincronización por Wi-Fi usa el mismo cerrojo y recarga que el resto del servidor
+    from core import wifi
+    wifi.GANCHOS.update(bloqueo=LOCK, recargar=recargar)
+
+
+_ganchos_wifi()
 
 
 def serve(puerto, auto_apagar=True):

@@ -37,6 +37,19 @@ def zip_reciente():
     return (p, p.stat().st_mtime) if p else (None, 0)
 
 
+def guardar_zip(nombre, datos):
+    """Guarda en <datos>/data un zip de Exportify recibido de otro dispositivo (el más reciente manda al leer)."""
+    nombre = Path(nombre).name
+    if not nombre.lower().endswith(".zip") or not datos:
+        raise ValueError("zip no válido")
+    destino = config.DATOS / "data"
+    destino.mkdir(parents=True, exist_ok=True)
+    tmp = destino / (nombre + ".tmp")
+    tmp.write_bytes(datos)
+    tmp.replace(destino / nombre)
+    os.utime(destino / nombre)
+
+
 def _historial():
     from core import historial
     return historial.ARCHIVO.read_text(encoding="utf-8").splitlines() if historial.ARCHIVO.exists() else []

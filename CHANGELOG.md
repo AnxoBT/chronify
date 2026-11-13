@@ -1,5 +1,11 @@
 # Cambios
 
+## v1.2.0 — 2026-11-13
+
+- **Sincronizar por Wi-Fi** (Ajustes), en casa y sin cable: uno de los dos espera y enseña su dirección y un código, y
+  el otro se conecta. Hace lo mismo que por USB: junta los datos de los dos en ambos sentidos, pasa el zip de Exportify
+  más nuevo y la versión nueva de la app al móvil. Todo va cifrado con el código, que solo sirve una vez y 2 minutos.
+
 ## v1.1.0 — 2026-11-13
 
 - **Novedades al actualizar**: la primera vez que abres Chronify después de una actualización, una ventana resume
