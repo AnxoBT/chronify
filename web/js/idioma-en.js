@@ -3,6 +3,8 @@
 // necesita su entrada aquí; si falta, se queda en español.
 const IDIOMA_EN = {
 exactos: {
+  "Novedades": "What's new",
+  "Entendido": "Got it",
   "Esto es Chronify": "This is Chronify",
   "Ordena tus listas de Spotify por la fecha real de cada canción (no la del remaster o el recopilatorio) y comprueba que tus listas cuadran entre sí.": "Sort your Spotify playlists by the real release date of every song (not the remaster's or the compilation's) and check that your playlists add up.",
   "Carga tus listas": "Load your playlists",
@@ -709,6 +711,7 @@ exactos: {
   "→ tu app → Settings: pega esa Redirect URI exacta y marca Web API.": "→ your app → Settings: paste that exact Redirect URI and tick Web API.",
 },
 patrones: [
+  ["^Novedades de la versión (.+)$", "What's new in version $1"],
   ["^(.+?): país → ([A-Z]{2}) \\((.+)\\)$", "$1: country → $2 ($3)"],
   ["^(.+?): país (.+?) → ([A-Z?]{1,2})$", "$1: country $2 → $3"],
   ["^¿Cambiar ([\\d.,]+) canciones por su versión buena en todas tus listas donde estén\\?\\n\\nCada una se pone en el mismo sitio y se quita la copia\\. Su fecha verificada se conserva\\. En las listas que no se reordenan \\(las que guardan el orden en que añades\\) esas canciones pasarán a tener fecha de añadido de hoy\\.\\n\\nSon unos ([\\d.,]+) cambios en Spotify: se para al llegar al límite diario y sigues otro día con este mismo botón\\.$", "Swap $1 songs for their right version in every playlist of yours they're in?\n\nEach one goes in the same place and the copy is removed. Its verified date is kept. In playlists that aren't reordered (the ones that keep the order you add songs in) those songs will get today as their date added.\n\nThat's about $2 changes in Spotify: it stops when it hits the daily limit and you continue another day with this same button."],

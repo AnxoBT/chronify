@@ -81,7 +81,8 @@ dependencies {
 // Solo el código y el conocimiento verificado: nunca .env, caché, CSV ni nada personal
 val copiarPython by tasks.registering(Sync::class) {
     from(raiz) {
-        include("core/**", "web/**", "conocimiento/**", "fechas.json", "reglas.defecto.json", "artistas.json")
+        include("core/**", "web/**", "conocimiento/**", "fechas.json", "reglas.defecto.json", "artistas.json",
+                "CHANGELOG.md", "CHANGELOG.en.md")
         exclude("**/__pycache__/**", "web/icono-*.ico")
     }
     into(layout.buildDirectory.dir("chronify-py"))

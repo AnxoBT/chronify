@@ -26,10 +26,16 @@ def run(*cmd, cwd=ROOT, salida=False):
 
 
 def notas():
-    s = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    i = s.index(f"## v{VERSION}")
-    j = s.find("\n## v", i + 1)
-    return s[i:j if j > 0 else None].split("\n", 1)[1].strip()
+    def seccion(nombre):
+        p = ROOT / nombre
+        s = p.read_text(encoding="utf-8") if p.exists() else ""
+        i = s.find(f"## v{VERSION}")
+        if i < 0:
+            return ""
+        j = s.find("\n## v", i + 1)
+        return s[i:j if j > 0 else None].split("\n", 1)[1].strip()
+    en = seccion("CHANGELOG.en.md")
+    return seccion("CHANGELOG.md") + (f"\n\n---\n\n**English**\n\n{en}" if en else "")
 
 
 def main():

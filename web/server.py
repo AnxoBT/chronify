@@ -690,6 +690,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, historial.leer())
         if u.path == "/api/spotify":
             return self._send(200, estado_spotify())
+        if u.path == "/api/novedades":  # ?desde=1.0.0&idioma=en → cambios desde esa versión (aviso tras actualizar)
+            from core import actualizar
+            return self._send(200, actualizar.novedades(q.get("desde", VERSION), q.get("idioma", "es")))
         if u.path == "/api/version":
             return self._send(200, {"version": VERSION})
         if u.path == "/api/actualizacion":

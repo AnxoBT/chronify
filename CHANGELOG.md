@@ -1,5 +1,10 @@
 # Cambios
 
+## v1.1.0 — 2026-11-13
+
+- **Novedades al actualizar**: la primera vez que abres Chronify después de una actualización, una ventana resume
+  qué ha cambiado desde tu versión.
+
 ## v1.0.0 — 2026-11-13
 
 Primera versión pública.

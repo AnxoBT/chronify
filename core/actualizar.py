@@ -108,6 +108,31 @@ def comprobar(forzar=False):
     return info
 
 
+def novedades(desde, idioma="es", hasta=VERSION):
+    """Cambios de las versiones posteriores a 'desde' hasta la actual (para el aviso "Novedades" tras actualizar):
+    [{version, fecha, intro, puntos}] de la más nueva a la más antigua, sacados de CHANGELOG.md (CHANGELOG.en.md en
+    inglés, si tiene esa versión)."""
+    import re
+    def leer(nombre):
+        p = config.ROOT / nombre
+        out, actual = {}, None
+        for linea in (p.read_text(encoding="utf-8").splitlines() if p.exists() else []):
+            m = re.match(r"^## v(\S+)(?:\s+[—-]\s+(.+))?$", linea.strip())
+            if m:
+                actual = out.setdefault(m.group(1), {"version": m.group(1), "fecha": m.group(2) or "", "intro": "", "puntos": []})
+            elif actual is not None and linea.startswith("- "):
+                actual["puntos"].append(linea[2:].strip())
+            elif actual is not None and linea.startswith("  ") and actual["puntos"]:
+                actual["puntos"][-1] += " " + linea.strip()  # continuación del punto anterior
+            elif actual is not None and linea.strip() and not linea.startswith("#"):
+                actual["intro"] = (actual["intro"] + " " + linea.strip()).strip()
+        return out
+    es, en = leer("CHANGELOG.md"), (leer("CHANGELOG.en.md") if idioma == "en" else {})
+    d, h = version_tupla(desde), version_tupla(hasta)
+    vers = [v for v in es if d < version_tupla(v) <= h]
+    return [en.get(v) or es[v] for v in sorted(vers, key=version_tupla, reverse=True)]
+
+
 def publico(info):
     return {k: v for k, v in info.items() if not k.startswith("_")}
 

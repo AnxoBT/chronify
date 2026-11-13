@@ -31,7 +31,7 @@ WEB = ROOT / "web"
 PYODIDE = "314.0.7"  # Python 3.14, como el APK. Al cambiarla, cambiar también la ruta en web/js/trabajador.js
 PYODIDE_ARCHIVOS = ("pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json")
 PY_INCLUIR = ["core/*.py", "web/server.py", "web/navegador.py", "fechas.json", "artistas.json", "reglas.defecto.json",
-              "conocimiento/*.json"]
+              "conocimiento/*.json", "CHANGELOG.md", "CHANGELOG.en.md"]
 ESTATICOS = ["estilos.css", "mundo.json", "logo.png", "logo-32.png", "logo.svg", "icono-180.png", "icono-192.png",
              "icono-512.png"]
 

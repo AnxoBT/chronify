@@ -55,6 +55,7 @@
 - **Statistics**: map, years, decades, artists, solo/groups, genres, mood, tempo, keys, popularity,
   length, niche artists (ListenBrainz listeners), "your year", monthly evolution
 - **History** with undo, **backup** and restore (also to move your data between devices)
+- **What's new**: after an update, a short summary of the changes ([CHANGELOG.en.md](CHANGELOG.en.md))
 - Swipe left/right on the phone to change tab
 - **Shared knowledge**: verified dates and artist countries ship with every version, so nobody starts from
   scratch. What you correct always wins over what a new version brings
@@ -208,6 +209,7 @@ released under the same licence, with its source code.
 - **Estadísticas**: mapa, años, décadas, artistas, solistas/grupos, géneros, ánimo, ritmo, tonalidades, popularidad,
   duración, artistas de nicho (oyentes en ListenBrainz), "tu año", evolución mensual
 - **Historial** con deshacer, **copia de seguridad** y restaurar (también para pasar tus datos de un dispositivo a otro)
+- **Novedades**: tras actualizar, un resumen corto de los cambios ([CHANGELOG.md](CHANGELOG.md))
 - En el móvil, desliza a izquierda o derecha para cambiar de pestaña
 - **Conocimiento compartido**: las fechas verificadas y los países de los artistas vienen con cada versión, así que
   nadie empieza de cero. Lo que corriges tú siempre manda sobre lo que traiga una versión nueva

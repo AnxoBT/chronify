@@ -569,3 +569,28 @@ document.querySelectorAll("#guia [data-idioma]").forEach(b => b.onclick = () => 
   try { vista = localStorage.getItem("chronify_guia"); seguir = sessionStorage.getItem("chronify_guia_abierta"); sessionStorage.removeItem("chronify_guia_abierta"); } catch (e) {}
   if (!vista || seguir) abrirGuia(0);
 })();
+
+// ── novedades tras actualizar: cambios desde la última versión que se abrió en este dispositivo (CHANGELOG) ──
+const tuplaVersion = v => String(v).replace(/^v/i, "").split(".").map(x => parseInt(x) || 0);
+const masNueva = (a, b) => { const x = tuplaVersion(a), y = tuplaVersion(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+function textoConNegritas(t) {  // **así** → <b> (sin innerHTML)
+  return t.replace(/`/g, "").split("**").map((trozo, i) => i % 2 ? el("b", {}, trozo) : trozo.replace(/\*([^*]+)\*/g, "$1"));
+}
+async function mostrarNovedades() {
+  let actual;
+  try { actual = (await api("/api/version")).version; } catch (e) { return; }
+  let vista = null;
+  try { vista = localStorage.getItem("chronify_version"); localStorage.setItem("chronify_version", actual); } catch (e) { return; }
+  if (!vista || !masNueva(actual, vista) || $("#guia").classList.contains("on")) return;  // instalación nueva: ya está la guía
+  let lista;
+  try { lista = await api(`/api/novedades?desde=${encodeURIComponent(vista)}&idioma=${IDIOMA}`); } catch (e) { return; }
+  if (!lista.length) return;
+  $("#nvTitulo").textContent = traducirTexto(`Novedades de la versión ${actual}`);
+  $("#nvLista").replaceChildren(...lista.slice(0, 4).flatMap(v => [
+    lista.length > 1 ? el("h4", {}, `v${v.version}` + (v.fecha ? ` · ${v.fecha}` : "")) : "",
+    v.intro ? el("p", {className:"muted small", style:"margin:0 0 6px"}, v.intro) : "",
+    el("ul", {}, ...v.puntos.map(p => el("li", {}, ...textoConNegritas(p))))]));
+  $("#novedades").classList.add("on");
+}
+$("#nvCerrar").onclick = () => $("#novedades").classList.remove("on");
+mostrarNovedades();

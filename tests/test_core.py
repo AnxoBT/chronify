@@ -777,6 +777,19 @@ class TestIdioma(unittest.TestCase):
         self.assertEqual(faltan, [], "textos de index.html sin traducir en web/js/idioma-en.js")
 
 
+class TestNovedades(unittest.TestCase):
+    def test_cambios_desde_tu_version(self):
+        from core import actualizar
+        n = actualizar.novedades("0.0.1", "es", hasta="1.1.0")
+        self.assertEqual([x["version"] for x in n][:2], ["1.1.0", "1.0.0"])  # de la más nueva a la más antigua
+        self.assertTrue(all(x["puntos"] for x in n))
+        self.assertEqual(actualizar.novedades("1.1.0", "es", hasta="1.1.0"), [])  # ya la tenías
+        self.assertEqual([x["version"] for x in actualizar.novedades("1.0.0", "es", hasta="1.1.0")], ["1.1.0"])
+        en = actualizar.novedades("1.0.0", "en", hasta="1.1.0")[0]["puntos"][0]
+        self.assertIn("What's new", en)  # en inglés, del CHANGELOG.en.md
+        self.assertNotIn("  ", actualizar.novedades("0.0.1", "es", hasta="1.0.0")[0]["puntos"][0])  # líneas unidas
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile
