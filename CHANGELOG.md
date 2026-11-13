@@ -1,6 +1,12 @@
 # Cambios
 
-## v1.6.3 — 2026-11-13
+## v1.7.0 — 2026-11-13
+
+- **Interfaz en inglés**: según el idioma del sistema (español o inglés) y con selector en Ajustes. Se traduce todo lo
+  que se ve: pestañas, botones, ayudas, avisos de las comprobaciones, registros de Spotify, estadísticas (también los
+  países del mapa) y mensajes de error. Tus listas, canciones y artistas se quedan como están.
+- **Bienvenida** la primera vez (sin listas): tres pasos para empezar y elegir idioma.
+- En el móvil, las rutas largas ya no ensanchan la página.
 
 - **Tus listas** con nombres generales para cualquiera: normal, general (une otras listas), parte de la general,
   época, género o estilo, ignorar.

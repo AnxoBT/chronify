@@ -40,7 +40,7 @@
   </tr>
 </table>
 
-> The interface is in Spanish for now.
+> The interface is in English and Spanish: it follows your system language and can be changed in Settings.
 
 ### Features
 

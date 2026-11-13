@@ -21,6 +21,12 @@
   nav button.on { color:var(--text); background:var(--panel2); }
   .hstat { margin-left:auto; color:var(--muted); font-size:12px; }
   section { display:none; padding:18px 0 40px; } section.on { display:block; }
+  #carpetas, code { overflow-wrap:anywhere; }  /* rutas largas sin espacios: que no ensanchen la página en el móvil */
+  /* bienvenida (primera vez, sin listas) */
+  .bienvenida { border-color:var(--acc); }
+  .pasos { margin:0; padding-left:20px; display:grid; gap:10px; }
+  .pasos li { line-height:1.5; }
+  .pasos button { margin-left:6px; }
   /* deslizar entre pestañas (base.js): la de al lado asoma por el borde mientras se arrastra */
   main { position:relative; }
   body.deslizando { overflow-x:hidden; }

@@ -725,6 +725,58 @@ class TestLikedEnListaNueva(unittest.TestCase):
             self.assertEqual(llamadas[0][:2], ("POST", "/me/playlists"))
 
 
+class TestIdioma(unittest.TestCase):
+    """Interfaz en inglés: todo texto fijo de index.html tiene traducción y el catálogo está bien formado."""
+
+    def _catalogo(self):
+        import re
+        from pathlib import Path
+        texto = (Path(__file__).resolve().parent.parent / "web/js/idioma-en.js").read_text(encoding="utf-8")
+        exactos = {}
+        for linea in texto.splitlines():
+            if linea.startswith('  "'):
+                k, v = json.loads("{" + linea.strip().rstrip(",") + "}").popitem()
+                exactos[k] = v
+            elif linea.startswith("  ["):
+                re.compile(json.loads(linea.strip().rstrip(","))[0])  # cada patrón es una expresión válida
+        return exactos
+
+    def test_index_traducido(self):
+        from html.parser import HTMLParser
+        from pathlib import Path
+        exactos = {" ".join(k.split()): v for k, v in self._catalogo().items()}
+        faltan = []
+
+        class P(HTMLParser):
+            pila = []
+
+            def handle_starttag(self, tag, attrs):
+                a = dict(attrs)
+                if tag not in ("br", "img", "input", "meta", "link"):
+                    self.pila.append((tag, "data-sin-traducir" in a))
+                for at in ("title", "placeholder"):
+                    if a.get(at) and not any(x for _, x in self.pila):
+                        self.ver(a[at])
+
+            def handle_endtag(self, tag):
+                while self.pila and self.pila.pop()[0] != tag:
+                    pass
+
+            def handle_data(self, data):
+                if any(t in ("script", "style", "code") or x for t, x in self.pila):
+                    return
+                self.ver(data)
+
+            def ver(self, t):
+                t = " ".join(t.split())
+                iguales = {"Chronify", "Spotify", "Exportify", "Rock", "Pop", "general", "Client ID", "Redirect URI",
+                           "developer.spotify.com/dashboard"}  # se dicen igual en inglés
+                if sum(c.isalpha() for c in t) >= 3 and t not in iguales and t not in exactos:
+                    faltan.append(t)
+        P().feed((Path(__file__).resolve().parent.parent / "web/index.html").read_text(encoding="utf-8"))
+        self.assertEqual(faltan, [], "textos de index.html sin traducir en web/js/idioma-en.js")
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile

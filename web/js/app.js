@@ -17,6 +17,7 @@ async function cargar(recargar) {
   $("#tlistas").replaceChildren(...E.listas.map(l => el("tr", {}, el("td", {}, l.nombre), el("td", {}, l.pistas),
     el("td", {className:"muted small"}, l.origen), el("td", {className:"muted small"}, l.fecha))));
   $("#carpetas").textContent = "Busca en: " + E.carpetas.join(" ; ");
+  $("#bienvenida").style.display = E.listas.length ? "none" : "";  // primera vez: cómo empezar
   if (E.android) modoAndroid();
   if (E.web) modoWeb();
   pintarAvisos(); pintarOrden(); pintarPendiente(E.pendiente, E.cupo);
@@ -63,7 +64,7 @@ function pintarPendiente(p, c) {
     el("div", {className:"muted small", style:"margin-top:6px"},
       "Lo que ya está hecho se queda bien. Al seguir se vuelve a leer cada lista y se calcula lo que falta."));
 }
-const horaCupo = c => c && c.libera ? new Date(c.libera * 1000).toLocaleString("es", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"}) : "mañana";
+const horaCupo = c => c && c.libera ? new Date(c.libera * 1000).toLocaleString(LOCALE, {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"}) : "mañana";
 const card = (t, v, cls = "") => el("div", {className:"box card"}, el("div", {className:"muted small"}, t), el("div", {className:"v " + cls}, String(v)));
 
 const EXC = {sin_genero:"sin_genero", sin_decada:"sin_decada", fuera_de_mix:"fuera_de_mix", falta_en_mix:"fuera_de_mix",
@@ -533,3 +534,10 @@ $("#tlGuardar").onclick = async () => {
     cargarTusListas();
   } catch (e) { toast(e.message); }
 };
+
+// ── bienvenida (primera vez) e idioma ──
+$("#bvImportar").onclick = () => $("#importarArchivo").click();
+const irA = (s, foco) => { document.querySelector(`#nav button[data-s="${s}"]`).click(); if (foco) setTimeout(() => $(foco).scrollIntoView({block:"start"}), 50); };
+$("#bvSpotify").onclick = () => irA("ajustes", "#cid");
+$("#bvListas").onclick = () => irA("ajustes", "#tusListas");
+document.querySelectorAll(".selIdioma").forEach(s => { s.value = IDIOMA; s.onchange = () => cambiarIdioma(s.value); });

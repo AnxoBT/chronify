@@ -6,7 +6,7 @@ function sv(tag, attrs = {}, ...kids) {
   for (const k of kids) e.append(k instanceof Node ? k : document.createTextNode(k ?? ""));
   return e;
 }
-const fmt = n => (n ?? 0).toLocaleString("es");
+const fmt = n => (n ?? 0).toLocaleString(LOCALE);
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 const TIP = $("#tip");
 // tooltip que sigue al ratón; contenido = array de nodos/textos (o función que lo devuelve)

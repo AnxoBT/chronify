@@ -108,7 +108,8 @@ async function cargarStats() {
       barrasV(ad.meses.map((m, i) => ({x: i % cadaM === 0 ? m.mes.slice(2).replace("-", "/") : "", n:m.total,
         tip:[el("b", {}, m.mes), `${fmt(m.total)} canciones en total`]})), {alto:130, color:"var(--s1)"}),
       el("div", {className:"sub", style:"margin-top:12px"}, "Día y hora a la que añades canciones"),
-      calor(["lun", "mar", "mié", "jue", "vie", "sáb", "dom"].map((d, i) => ({nombre:d, valores:ad.calor[i]})),
+      calor((IDIOMA === "en" ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]  // "mar" sería también marzo
+        : ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]).map((d, i) => ({nombre:d, valores:ad.calor[i]})),
         [...Array(24).keys()].map(h => h % 3 === 0 ? String(h) : ""),
         {tip:(f, h, v) => [el("b", {}, `${f.nombre} de ${h}:00 a ${h}:59`), `${fmt(v)} canciones`]}))));
   }
