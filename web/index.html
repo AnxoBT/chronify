@@ -108,6 +108,7 @@
       <h3 style="margin:0 0 10px">Idioma / Language</h3>
       <div class="row"><select class="selIdioma" data-sin-traducir><option value="es">Español</option><option value="en">English</option></select>
         <span class="muted small">Por defecto, el del sistema.</span></div>
+      <div style="margin-top:12px"><button id="verGuia">Ver la guía de inicio</button></div>
     </div>
     <div class="box" id="tusListas">
       <h3 style="margin:0 0 10px">Tus listas</h3>
@@ -180,6 +181,21 @@
     </div>
   </section>
 </main>
+<!-- guía de inicio: sale la primera vez en cada dispositivo (y desde Ajustes) -->
+<div class="guia" id="guia"><div class="gcaja">
+  <div class="gpaso" data-i="0"><div class="gico">👋</div><h2>Esto es Chronify</h2>
+    <p>Ordena tus listas de Spotify por la fecha real de cada canción (no la del remaster o el recopilatorio) y comprueba que tus listas cuadran entre sí.</p>
+    <div class="seg2" data-sin-traducir><button data-idioma="es">Español</button><button data-idioma="en">English</button></div></div>
+  <div class="gpaso" data-i="1"><div class="gico">📥</div><h2>Carga tus listas</h2>
+    <p>Con el zip de Exportify (gratis: Resumen → Importar zip) o, si tienes Premium, conectando tu cuenta en Ajustes: así se leen y se ordenan directamente en Spotify.</p></div>
+  <div class="gpaso" data-i="2"><div class="gico">📅</div><h2>Ordena y revisa</h2>
+    <p>En Ordenar ves cada lista por fecha real: aplícalo en Spotify o copia el txt. Comprobaciones avisa de repetidas, directos, remixes y fechas por revisar.</p></div>
+  <div class="gpaso" data-i="3"><div class="gico">📊</div><h2>Tu música en cifras</h2>
+    <p>Mapa del mundo de tus artistas, décadas, géneros, tu año… En el móvil, desliza a los lados para cambiar de pestaña. Opcional: en Ajustes → Tus listas dile qué es cada lista.</p></div>
+  <div class="gpuntos" id="gPuntos"></div>
+  <div class="gbotones"><button id="gAtras">Anterior</button><button class="pri" id="gSig">Siguiente</button></div>
+  <a href="#" class="gsaltar" id="gSaltar">Saltar</a>
+</div></div>
 <div id="toast"></div>
 <div id="tip"></div>
 

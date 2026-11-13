@@ -3,6 +3,19 @@
 // necesita su entrada aquí; si falta, se queda en español.
 const IDIOMA_EN = {
 exactos: {
+  "Esto es Chronify": "This is Chronify",
+  "Ordena tus listas de Spotify por la fecha real de cada canción (no la del remaster o el recopilatorio) y comprueba que tus listas cuadran entre sí.": "Sort your Spotify playlists by the real release date of every song (not the remaster's or the compilation's) and check that your playlists add up.",
+  "Carga tus listas": "Load your playlists",
+  "Con el zip de Exportify (gratis: Resumen → Importar zip) o, si tienes Premium, conectando tu cuenta en Ajustes: así se leen y se ordenan directamente en Spotify.": "With the Exportify zip (free: Summary → Import zip) or, if you have Premium, by connecting your account in Settings: then they are read and sorted right in Spotify.",
+  "Ordena y revisa": "Sort and review",
+  "En Ordenar ves cada lista por fecha real: aplícalo en Spotify o copia el txt. Comprobaciones avisa de repetidas, directos, remixes y fechas por revisar.": "In Sort you see each playlist by real date: apply it in Spotify or copy the txt. Checks warns about duplicates, live versions, remixes and dates to review.",
+  "Tu música en cifras": "Your music in numbers",
+  "Mapa del mundo de tus artistas, décadas, géneros, tu año… En el móvil, desliza a los lados para cambiar de pestaña. Opcional: en Ajustes → Tus listas dile qué es cada lista.": "World map of your artists, decades, genres, your year… On the phone, swipe sideways to change tab. Optional: in Settings → Your playlists, tell it what each playlist is.",
+  "Anterior": "Back",
+  "Siguiente": "Next",
+  "Empezar": "Get started",
+  "Saltar": "Skip",
+  "Ver la guía de inicio": "Show the welcome guide",
   "revisión a mano": "manual review",
   "(Export All → zip). En el PC se coge solo de Descargas; si no, elígelo con": "(Export All → zip). On the PC it's picked up automatically from Downloads; otherwise, choose it with",
   "(cada canción de la general en al menos una). Marca": "playlists (each song from the general one in at least one). Tick",

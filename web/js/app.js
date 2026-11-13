@@ -541,3 +541,31 @@ const irA = (s, foco) => { document.querySelector(`#nav button[data-s="${s}"]`).
 $("#bvSpotify").onclick = () => irA("ajustes", "#cid");
 $("#bvListas").onclick = () => irA("ajustes", "#tusListas");
 document.querySelectorAll(".selIdioma").forEach(s => { s.value = IDIOMA; s.onchange = () => cambiarIdioma(s.value); });
+
+// ── guía de inicio: 4 pasos la primera vez en cada dispositivo; se puede volver a ver desde Ajustes ──
+let GUIA = 0;
+const PASOS_GUIA = document.querySelectorAll("#guia .gpaso").length;
+function pintarGuia() {
+  document.querySelectorAll("#guia .gpaso").forEach((p, i) => p.classList.toggle("on", i === GUIA));
+  $("#gPuntos").replaceChildren(...[...Array(PASOS_GUIA)].map((_, i) => el("i", {className: i === GUIA ? "on" : ""})));
+  $("#gAtras").style.visibility = GUIA ? "visible" : "hidden";
+  $("#gSig").textContent = traducirTexto(GUIA === PASOS_GUIA - 1 ? "Empezar" : "Siguiente");
+  document.querySelectorAll("#guia [data-idioma]").forEach(b => b.classList.toggle("on", b.dataset.idioma === IDIOMA));
+}
+function abrirGuia(i = 0) { GUIA = i; $("#guia").classList.add("on"); pintarGuia(); }
+function cerrarGuia() {
+  $("#guia").classList.remove("on");
+  try { localStorage.setItem("chronify_guia", "1"); } catch (e) {}
+}
+$("#gSig").onclick = () => { if (GUIA === PASOS_GUIA - 1) return cerrarGuia(); GUIA++; pintarGuia(); };
+$("#gAtras").onclick = () => { GUIA = Math.max(0, GUIA - 1); pintarGuia(); };
+$("#gSaltar").onclick = ev => { ev.preventDefault(); cerrarGuia(); };
+$("#verGuia").onclick = () => abrirGuia(0);
+document.querySelectorAll("#guia [data-idioma]").forEach(b => b.onclick = () => {
+  if (b.dataset.idioma !== IDIOMA) { try { sessionStorage.setItem("chronify_guia_abierta", "1"); } catch (e) {} cambiarIdioma(b.dataset.idioma); }
+});
+(() => {  // primera vez en este dispositivo (o vuelve tras cambiar de idioma desde la propia guía)
+  let vista = null, seguir = null;
+  try { vista = localStorage.getItem("chronify_guia"); seguir = sessionStorage.getItem("chronify_guia_abierta"); sessionStorage.removeItem("chronify_guia_abierta"); } catch (e) {}
+  if (!vista || seguir) abrirGuia(0);
+})();

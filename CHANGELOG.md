@@ -1,5 +1,10 @@
 # Cambios
 
+## v1.0.1 — 2026-11-13
+
+- **Guía de inicio** como en tri-sync: cuatro pasos la primera vez que abres Chronify en cada dispositivo (qué es,
+  cargar listas, ordenar y revisar, estadísticas), con selector de idioma. Se puede volver a ver en Ajustes.
+
 ## v1.0.0 — 2026-11-13
 
 Primera versión pública.

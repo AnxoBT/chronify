@@ -22,6 +22,22 @@
   .hstat { margin-left:auto; color:var(--muted); font-size:12px; }
   section { display:none; padding:18px 0 40px; } section.on { display:block; }
   #carpetas, code { overflow-wrap:anywhere; }  /* rutas largas sin espacios: que no ensanchen la página en el móvil */
+  /* guía de inicio (como en tri-sync) */
+  .guia { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; place-items:center; z-index:40; padding:16px; }
+  .guia.on { display:grid; }
+  .gcaja { background:var(--panel); border:1px solid var(--line); border-radius:16px; width:min(440px,100%);
+    padding:26px 22px 16px; text-align:center; }
+  .gpaso { display:none; } .gpaso.on { display:block; animation:gEntra .25s ease-out; }
+  @keyframes gEntra { from { transform:translateX(40px); opacity:0; } }
+  .gico { font-size:40px; } .gpaso h2 { margin:6px 0 8px; font-size:20px; } .gpaso p { color:var(--muted); margin:0 0 14px; line-height:1.5; }
+  .gpuntos { display:flex; gap:6px; justify-content:center; margin:6px 0 14px; }
+  .gpuntos i { width:7px; height:7px; border-radius:50%; background:var(--line); transition:width .2s; }
+  .gpuntos i.on { background:var(--acc); width:18px; border-radius:4px; }
+  .gbotones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .gsaltar { display:inline-block; margin-top:12px; color:var(--muted); font-size:13px; }
+  .seg2 { display:inline-flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:3px; margin-bottom:6px; }
+  .seg2 button { border:0; background:none; color:var(--muted); padding:7px 14px; }
+  .seg2 button.on { background:var(--panel2); color:var(--text); }
   /* bienvenida (primera vez, sin listas) */
   .bienvenida { border-color:var(--acc); }
   .pasos { margin:0; padding-left:20px; display:grid; gap:10px; }
