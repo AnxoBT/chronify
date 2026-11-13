@@ -15,3 +15,4 @@ __pycache__/
 # Herramientas locales
 .playwright-mcp/
 .claude/settings.local.json
+CLAUDE.local.md
