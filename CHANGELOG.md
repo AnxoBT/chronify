@@ -1,14 +1,11 @@
 # Cambios
 
-## v1.0.1 — 2026-11-13
-
-- **Guía de inicio** como en tri-sync: cuatro pasos la primera vez que abres Chronify en cada dispositivo (qué es,
-  cargar listas, ordenar y revisar, estadísticas), con selector de idioma. Se puede volver a ver en Ajustes.
-
 ## v1.0.0 — 2026-11-13
 
 Primera versión pública.
 
+- **Guía de inicio**: cuatro pasos la primera vez que abres Chronify en cada dispositivo, con selector de idioma; se
+  puede volver a ver en Ajustes.
 - **Ordenar por fecha real** cualquier lista de Spotify: copiar y pegar en el Spotify del PC o (con Premium)
   aplicarlo por la API, que *mueve* las canciones sin borrarlas y conserva la fecha en que las añadiste.
 - **Comprobaciones**: repetidas, la misma canción en ediciones distintas, directos, remixes, recopilatorios y copias
