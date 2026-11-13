@@ -20,6 +20,8 @@ PUERTOS = (8767, 8768, 8769)
 ESPERA = 120  # segundos que se queda abierto
 MAX_FALLOS = 5
 MAX_CUERPO = 120_000_000
+MAX_INICIAL = 1_000_000  # antes de la primera petición autenticada
+_UNA = threading.Lock()
 GANCHOS = {"bloqueo": threading.Lock(), "recargar": lambda: None}  # web/server.py pone su LOCK y recargar()
 ESTADO = {"esperando": False, "direccion": "", "codigo": "", "hasta": 0, "fallos": 0, "conectando": False,
           "log": [], "error": None, "resultado": None, "apk_listo": None}
@@ -74,10 +76,10 @@ def _atender(cab, carga):
             cambios = sincro.recibir(json.loads(carga))
         return {"cambios": cambios}, b""
     if op == "zip_bajar":
-        p, _ = sincro.zip_reciente()
-        return ({"nombre": p.name}, p.read_bytes()) if p else ({"nombre": None}, b"")
+        p, mtime = sincro.zip_reciente()
+        return ({"nombre": p.name, "mtime": mtime}, p.read_bytes()) if p else ({"nombre": None}, b"")
     if op == "zip_subir":
-        sincro.guardar_zip(cab.get("nombre", ""), carga)
+        sincro.guardar_zip(cab.get("nombre", ""), carga, cab.get("mtime"))
         GANCHOS["recargar"]()
         return {"ok": True}, b""
     if op == "apk_bajar":  # el móvil pide la versión nueva al PC
@@ -113,8 +115,15 @@ class _Manejador(BaseHTTPRequestHandler):
         self._responder(404, b"")
 
     def do_POST(self):
+        # Una petición cada vez (el protocolo va por turnos): nadie de la red puede llenar la memoria con muchas a la vez.
+        with _UNA:
+            self._post()
+
+    def _post(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if self.path != "/wifi" or not ESTADO["esperando"] or not 0 < n <= MAX_CUERPO or time.time() > ESTADO["hasta"]:
+        # Hasta que llegue la primera petición con el código bueno, solo cuerpos pequeños (el "hola" ocupa poco).
+        tope = MAX_CUERPO if _SRV["ultimo_id"] else MAX_INICIAL
+        if self.path != "/wifi" or not ESTADO["esperando"] or not 0 < n <= tope or time.time() > ESTADO["hasta"]:
             return self._responder(404, b"")
         ks = _SRV["ks"]  # la de esta petición (al terminar, "fin" cierra la espera y la borra)
         if not ks:
@@ -128,7 +137,9 @@ class _Manejador(BaseHTTPRequestHandler):
                 threading.Thread(target=parar, daemon=True).start()
             return self._responder(403, b"")
         # contra repeticiones: cada petición lleva un número mayor que la anterior y la hora
-        if not isinstance(cab.get("id"), int) or cab["id"] <= _SRV["ultimo_id"] or abs(time.time() - cab.get("ts", 0)) > 300:
+        ts = cab.get("ts")
+        if not isinstance(cab.get("id"), int) or cab["id"] <= _SRV["ultimo_id"] or not isinstance(ts, (int, float)) \
+                or abs(time.time() - ts) > 300:
             return self._responder(409, b"")
         _SRV["ultimo_id"] = cab["id"]
         ESTADO["hasta"] = max(ESTADO["hasta"], time.time() + 60)  # mientras se sincroniza no se corta
@@ -233,13 +244,13 @@ def conectar(direccion, codigo, log=print):
     p, mtime = sincro.zip_reciente()
     if p and mtime > (otro.get("zip") or 0) + 1:
         log(f"Pasándole el zip de Exportify ({p.name})…")
-        pedir("zip_subir", {"nombre": p.name}, p.read_bytes(), timeout=300)
+        pedir("zip_subir", {"nombre": p.name, "mtime": mtime}, p.read_bytes(), timeout=300)
         alli.append("zip de Exportify")
     elif (otro.get("zip") or 0) > mtime + 1:
         log("Trayendo su zip de Exportify, más nuevo…")
         rc, z = pedir("zip_bajar", timeout=300)
         if rc.get("nombre") and z:
-            sincro.guardar_zip(rc["nombre"], z)
+            sincro.guardar_zip(rc["nombre"], z, rc.get("mtime"))
             GANCHOS["recargar"]()
             aqui.append("zip de Exportify")
 

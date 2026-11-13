@@ -37,7 +37,7 @@ def zip_reciente():
     return (p, p.stat().st_mtime) if p else (None, 0)
 
 
-def guardar_zip(nombre, datos):
+def guardar_zip(nombre, datos, mtime=None):
     """Guarda en <datos>/data un zip de Exportify recibido de otro dispositivo (el más reciente manda al leer)."""
     nombre = Path(nombre).name
     if not nombre.lower().endswith(".zip") or not datos:
@@ -47,7 +47,11 @@ def guardar_zip(nombre, datos):
     tmp = destino / (nombre + ".tmp")
     tmp.write_bytes(datos)
     tmp.replace(destino / nombre)
-    os.utime(destino / nombre)
+    # con la fecha del original: si no, este quedaría "más nuevo" y se devolvería en cada sincronización
+    if isinstance(mtime, (int, float)) and mtime > 0:
+        os.utime(destino / nombre, (mtime, mtime))
+    else:
+        os.utime(destino / nombre)
 
 
 def _historial():
