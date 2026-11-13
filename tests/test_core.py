@@ -779,7 +779,23 @@ class TestIdioma(unittest.TestCase):
 
 class TestNovedades(unittest.TestCase):
     def test_cambios_desde_tu_version(self):
+        # CHANGELOG de prueba (el real cambia con cada versión)
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
         from core import actualizar
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "CHANGELOG.md").write_text(
+            "# Cambios\n\n## v1.1.0 — 2026-12-01\n\n- **Novedades**: una ventana\n  resume los cambios.\n\n"
+            "## v1.0.0 — 2026-11-13\n\nPrimera versión pública.\n\n- Ordenar por fecha real\n  cualquier lista.\n",
+            encoding="utf-8")
+        (tmp / "CHANGELOG.en.md").write_text(
+            "# Changelog\n\n## v1.1.0 — 2026-12-01\n\n- **What's new**: a window sums up the changes.\n",
+            encoding="utf-8")
+        parche = mock.patch.object(actualizar.config, "ROOT", tmp)
+        parche.start()
+        self.addCleanup(parche.stop)
         n = actualizar.novedades("0.0.1", "es", hasta="1.1.0")
         self.assertEqual([x["version"] for x in n][:2], ["1.1.0", "1.0.0"])  # de la más nueva a la más antigua
         self.assertTrue(all(x["puntos"] for x in n))

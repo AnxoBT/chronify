@@ -22,9 +22,9 @@ android {
         applicationId = "com.anxobt.chronify"
         minSdk = 26
         targetSdk = 35
-        // +100000: la numeración se reinició en 1.0.0 (antes llegó a 1.7.0 = 10700); así cada versión sigue siendo
+        // +200000: la numeración se reinició en 1.0.0 (antes llegó a 1.7.0 = 10700 y, tras un primer reinicio, a 1.2.0 = 110200); así cada versión sigue siendo
         // mayor que la instalada y Android la deja instalar encima.
-        versionCode = 100000 + ma * 10000 + mi * 100 + pa
+        versionCode = 200000 + ma * 10000 + mi * 100 + pa
         versionName = version
         ndk {
             abiFilters += listOf("arm64-v8a")  // móviles actuales; x86 solo haría falta para el emulador
