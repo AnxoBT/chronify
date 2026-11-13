@@ -71,13 +71,16 @@ def peticiones(o):
     l = ESTADO["listas"].get(o["clave"])
     if not l or o["fija"] or o["ordenada"]:
         return None if not l or o["fija"] else 0
+    if o.get("en_lista_nueva"):  # crear la lista + añadir de 100 en 100
+        return 2 + len(o["orden"]) // 100
     try:
         return len(spotify.plan_movimientos(l.pistas, o["orden"]))
     except ValueError:  # duplicados: se calcula al aplicar
         return None
 
 
-CLAVES_LISTAS = ("mix", "idiomas", "friki", "decadas", "generos", "no_reordenar", "ignorar")
+CLAVES_LISTAS = ("mix", "idiomas", "friki", "decadas", "generos", "no_reordenar", "ignorar", "liked_ordenar")
+CREADAS = "listas_creadas.json"  # {lista: id de la lista nueva en Spotify} (p. ej. Liked ordenada por fecha)
 
 
 def reglas_listas():
@@ -88,7 +91,7 @@ def reglas_listas():
     vistas = {l.nombre: {"nombre": l.nombre, "n": len(set(l.pistas)), "solo_lectura": l.solo_lectura}
               for l in ESTADO["listas"].values() if not l.ajena}
     for n in R.get("ignorar") or []:  # las ignoradas no se cargan: se enseñan igual para poder quitarlas
-        vistas.setdefault(n, {"nombre": n, "n": None, "solo_lectura": False})
+        vistas.setdefault(n, {"nombre": n, "n": None, "solo_lectura": n in (R.get("solo_lectura") or [])})
     return {**{k: R.get(k) for k in CLAVES_LISTAS},
             "listas": sorted(vistas.values(), key=lambda x: (x["solo_lectura"], -(x["n"] or 0), config.norm(x["nombre"])))}
 
@@ -107,7 +110,8 @@ def guardar_listas(b):
         if not 1800 <= x <= 2200:
             raise ValueError(f"año fuera de rango: {x}")
         return x
-    nuevo = {"mix": str(b.get("mix") or "").strip(), "friki": str(b.get("friki") or "").strip()}
+    nuevo = {"mix": str(b.get("mix") or "").strip(), "friki": str(b.get("friki") or "").strip(),
+             "liked_ordenar": bool(b.get("liked_ordenar"))}
     for k in ("idiomas", "generos", "no_reordenar", "ignorar"):
         nuevo[k] = nombres(b.get(k) or [])
     dec = b.get("decadas") or {}
@@ -122,7 +126,7 @@ def guardar_listas(b):
     if nuevo["friki"] and nuevo["friki"] not in nuevo["idiomas"]:
         nuevo["friki"] = ""
     if nuevo["mix"] and nuevo["mix"] in nuevo["idiomas"]:
-        raise ValueError("El Mix no puede formar parte de sí mismo")
+        raise ValueError("La lista general no puede formar parte de sí misma")
     R = config.rules()
     antes = {k: R.get(k) for k in CLAVES_LISTAS}
     for k in ("idiomas", "generos", "no_reordenar", "ignorar"):  # se conserva el orden que ya tenían
@@ -234,6 +238,30 @@ def _cambiar_lista(tid, desde, hacia):
     return fn
 
 
+def _crear_ordenada(clave):
+    """Copia ordenada por fecha real de una lista que Spotify no deja reordenar (Liked) en una lista nueva tuya.
+    La próxima vez se actualiza la misma lista (si no la has borrado)."""
+    def fn(log):
+        from core import spotify
+        o = next((o for o in analisis.ordenar(ESTADO["listas"], ESTADO["cat"]) if o["clave"] == clave), None)
+        if not o or not o["en_lista_nueva"]:
+            raise ValueError("Esa lista no se ordena en una lista nueva (Ajustes → Tus listas)")
+        falta = 2 + len(o["orden"]) // 100
+        if spotify.cupo()["libres"] < falta:
+            raise ValueError(spotify._msg_cupo(spotify.cupo()))
+        nombre = ("Canciones que te gustan" if o["lista"] == "Liked_Songs" else o["lista"]) + " · por fecha"
+        creadas = config.cache_json(CREADAS)
+        log(f"{nombre}: {len(o['orden'])} canciones…")
+        pid = spotify.crear_o_rellenar(nombre, o["orden"], creadas.get(clave),
+                                       "Ordenada por la fecha real de cada canción (Chronify)")
+        nueva = creadas.get(clave) != pid
+        config.save_cache(CREADAS, {**creadas, clave: pid})
+        log(f"{nombre}: {'creada' if nueva else 'actualizada'} en Spotify")
+        historial.registrar("spotify", f"{nombre}: {'creada' if nueva else 'actualizada'} ({len(o['orden'])} canciones)")
+        return {"id": pid, "nombre": nombre}
+    return fn
+
+
 def _ordenar(nombres, forzar=False):
     """Ordena en Spotify una o varias listas seguidas hasta acabar o hasta el cupo diario.
 
@@ -262,9 +290,9 @@ def _ordenar(nombres, forzar=False):
                 if not o or not l:
                     log(f"{nombre}: no la encuentro, la salto")
                     continue
-                if o["fija"]:
+                if o["fija"] or not l.spotify_id:  # Liked: no se puede mover; se ordena en una lista nueva
                     saltadas.append(nombre)
-                    log(f"{nombre}: está marcada para no reordenarse, la salto")
+                    log(f"{nombre}: no se reordena aquí, la salto")
                     continue
                 if o["ordenada"]:
                     log(f"{nombre}: ya está ordenada")
@@ -841,7 +869,7 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True})
         if u.path in ("/api/spotify/probar", "/api/spotify/leer", "/api/spotify/aplicar", "/api/spotify/cambiar_epoca",
                       "/api/spotify/anadir_a", "/api/spotify/ordenar_todas", "/api/spotify/seguir",
-                      "/api/spotify/buscar_copias", "/api/spotify/cambiar_copias"):
+                      "/api/spotify/buscar_copias", "/api/spotify/cambiar_copias", "/api/spotify/crear_ordenada"):
             if SP["activo"]:
                 return self._send(409, {"error": f"ya hay una tarea en marcha ({SP['tarea']})"})
             nombre = u.path.rsplit("/", 1)[-1]
@@ -855,7 +883,9 @@ class H(BaseHTTPRequestHandler):
                 fn = _ordenar([b.get("lista", "")], bool(b.get("forzar")))
             elif nombre == "ordenar_todas":
                 fn = _ordenar([o["clave"] for o in analisis.ordenar(ESTADO["listas"], ESTADO["cat"])
-                               if not o["fija"] and not o["ordenada"]], bool(b.get("forzar")))
+                               if not o["fija"] and not o["ordenada"] and not o["en_lista_nueva"]], bool(b.get("forzar")))
+            elif nombre == "crear_ordenada":
+                fn = _crear_ordenada(b.get("lista", ""))
             elif nombre == "seguir":
                 p = pendiente() or {}
                 if not p.get("listas"):

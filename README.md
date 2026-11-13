@@ -50,6 +50,7 @@
   compilations and barely-played copies (with a button to swap them for the main one)
 - **Your playlists** (optional): a mix made of other playlists, eras with year ranges, genres, playlists
   never to reorder, playlists to ignore. Suggestions and one-tap fixes ("add to…", "move to…")
+- **Liked Songs** can't be reordered in Spotify, but you can get them sorted by real date into a new playlist (one tap)
 - **Dates**: proposals from MusicBrainz for songs without a verified date; you decide
 - **Statistics**: map, years, decades, artists, solo/groups, genres, mood, tempo, keys, popularity,
   length, niche artists (ListenBrainz listeners), "your year", monthly evolution
@@ -202,6 +203,7 @@ released under the same licence, with its source code.
   recopilatorios y copias poco escuchadas (con botón para cambiarlas por la principal)
 - **Tus listas** (opcional): un Mix formado por otras listas, épocas con sus años, géneros, listas que no se
   reordenan nunca, listas a ignorar. Sugerencias y arreglos con un toque ("añadir a…", "mover a…")
+- **Canciones que te gustan**: Spotify no deja reordenarlas, pero puedes tenerlas ordenadas por fecha real en una lista nueva (un toque)
 - **Fechas**: propuestas de MusicBrainz para canciones sin fecha verificada; decides tú
 - **Estadísticas**: mapa, años, décadas, artistas, solistas/grupos, géneros, ánimo, ritmo, tonalidades, popularidad,
   duración, artistas de nicho (oyentes en ListenBrainz), "tu año", evolución mensual

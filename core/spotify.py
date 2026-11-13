@@ -339,7 +339,7 @@ def cargar(ignorar=(), solo_lectura=(), progreso=None):
     propias = [pl for pl in mis_listas() if pl and (pl.get("owner") or {}).get("id") == yo_id
                and pl.get("name") not in ignorar]
     fuentes = [(pl["name"], pl["id"], pl.get("snapshot_id")) for pl in propias]
-    if "Liked_Songs" in solo_lectura:
+    if "Liked_Songs" not in ignorar:  # canciones que te gustan: siempre de solo lectura
         fuentes.append(("Liked_Songs", None, None))
     leido, releidas = _lectura_incremental(fuentes, progreso)
     for nombre, pid, _ in fuentes:
@@ -350,11 +350,32 @@ def cargar(ignorar=(), solo_lectura=(), progreso=None):
                                       duracion=x["duracion"], popularidad=x["popularidad"],
                                       explicita=x["explicita"], album_tipo=x["album_tipo"])
         listas[nombre] = Lista(nombre=nombre, origen="Spotify API", mtime=time.time(), pistas=[x["id"] for x in its],
-                               autor=yo_id, solo_lectura=nombre in solo_lectura, spotify_id=pid or "",
+                               autor=yo_id, solo_lectura=not pid or nombre in solo_lectura, spotify_id=pid or "",
                                anadidas={x["id"]: x["added_at"] or "" for x in reversed(its)})
     if progreso and releidas < len(fuentes):
         progreso(f"Solo {releidas} de {len(fuentes)} listas tenían cambios")
     return listas, catalogo
+
+
+def crear_o_rellenar(nombre, ids, pid=None, descripcion=""):
+    """Lista propia con esas canciones en ese orden (p. ej. Liked por fecha). Si 'pid' es una lista tuya que sigue
+    existiendo, la reemplaza; si no, crea una privada. Escrituras: 1 + una por cada 100 canciones. Devuelve su id."""
+    uris = [f"spotify:track:{t}" for t in ids]
+    if pid and pid not in {pl["id"] for pl in mis_listas() if pl}:
+        pid = None  # la borraste: se crea otra
+    if pid:
+        call("PUT", f"/playlists/{pid}/items", {"uris": uris[:100]})  # reemplaza todo con las 100 primeras
+    else:
+        cuerpo = {"name": nombre, "public": False, "description": descripcion}
+        try:
+            pid = call("POST", "/me/playlists", cuerpo)["id"]
+        except RuntimeError:  # endpoint antiguo
+            pid = call("POST", f"/users/{yo()['id']}/playlists", cuerpo)["id"]
+        if uris:
+            call("POST", f"/playlists/{pid}/items", {"uris": uris[:100]})
+    for i in range(100, len(uris), 100):
+        call("POST", f"/playlists/{pid}/items", {"uris": uris[i:i + 100]})
+    return pid
 
 
 def mover(playlist_id, desde, antes_de, snapshot=None, largo=1):

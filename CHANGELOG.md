@@ -1,5 +1,13 @@
 # Cambios
 
+## v1.6.3 — 2026-11-13
+
+- **Tus listas** con nombres generales para cualquiera: normal, general (une otras listas), parte de la general,
+  época, género o estilo, ignorar.
+- **Canciones que te gustan**: ahora eliges qué hacer con ellas: solo lectura (por defecto), ignorarlas u
+  **ordenarlas en una lista nueva** (Spotify no deja reordenarlas): txt o botón *crear lista ordenada*, que crea —o
+  actualiza la próxima vez— la lista privada "Canciones que te gustan · por fecha" con unos 3 cambios.
+
 ## v1.6.2 — 2026-11-12
 
 - Deslizar entre pestañas en el móvil, como en las redes sociales: la pestaña sigue al dedo, la de al lado asoma por

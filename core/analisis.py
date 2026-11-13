@@ -263,8 +263,10 @@ def ordenar(listas, cat, F=None, R=None):
                 visto.add(t); unicas.append(t)
         nuevo = sorted(unicas, key=lambda t: F.clave(t, cat.get(t)))
         movidas = a_mover(unicas, nuevo) + (len(l.pistas) - len(unicas))
-        out.append({"lista": l.nombre, "clave": k, "fija": id(l) in fijas or l.ajena or l.solo_lectura,
-                    "solo_lectura": l.solo_lectura, "pistas": len(l.pistas),
+        # las de solo lectura (Liked) no se tocan nunca; si el usuario quiere, se ordenan en una lista nueva
+        nueva = l.solo_lectura and bool(R.get("liked_ordenar"))
+        out.append({"lista": l.nombre, "clave": k, "fija": id(l) in fijas or l.ajena or (l.solo_lectura and not nueva),
+                    "solo_lectura": l.solo_lectura, "en_lista_nueva": nueva, "pistas": len(l.pistas),
                     "ordenada": movidas == 0, "movidas": movidas, "orden": nuevo,
                     # fecha de Spotify sin revisar: ordenar las colocaría quizá mal (ver Fechas → Nuevas)
                     "sin_verificar": [t for t in unicas if t not in F.pistas]})

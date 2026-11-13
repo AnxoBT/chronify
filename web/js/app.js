@@ -150,7 +150,7 @@ const dias = n => Math.max(1, Math.ceil(n / (E.cupo ? E.cupo.limite : 500)));
 function pintarOrden() {
   const api_ = E.fuente === "Spotify (API)";
   $("#tordenar").replaceChildren(...E.orden.map(o => el("tr", {},
-    el("td", {}, o.lista),
+    el("td", {}, o.lista === "Liked_Songs" ? "Canciones que te gustan" : o.lista),
     el("td", {}, o.fija ? el("span", {className:"tag info"}, o.solo_lectura ? "solo lectura" : "no se reordena")
       : o.ordenada ? el("span", {className:"tag ok"}, "ya ordenada") : el("span", {className:"tag aviso"}, `${o.movidas} posiciones cambian`),
       !o.fija && !o.ordenada && o.peticiones != null ? el("span", {className:"muted small"}, ` · ${o.peticiones} cambios en Spotify${o.peticiones > (E.cupo ? E.cupo.limite : 500) ? ` (~${dias(o.peticiones)} días)` : ""}`) : "",
@@ -158,14 +158,18 @@ function pintarOrden() {
     el("td", {className:"row"},
       E.android ? "" : el("button", {className:"mini", onclick: async () => { await navigator.clipboard.writeText(await api("/api/txt?lista=" + encodeURIComponent(o.clave))); toast(`Copiadas ${o.pistas} canciones de ${o.lista}`); }}, "copiar"),
       E.android ? "" : el("a", {href:"/api/txt?lista=" + encodeURIComponent(o.clave), download:o.lista + ".txt"}, "descargar"),
-      api_ && !o.fija && !o.ordenada ? el("button", {className:"mini pri", onclick: async () => {
+      api_ && o.en_lista_nueva ? el("button", {className:"mini pri", title:"Crea (o actualiza) en Spotify una lista con estas canciones ordenadas por fecha real",
+        onclick: async () => {
+          try { await api("/api/spotify/crear_ordenada", {lista:o.clave}); toast("Creando la lista…"); pintarSpotify(); }
+          catch (e) { toast(e.message); } }}, "crear lista ordenada") : "",
+      api_ && !o.fija && !o.ordenada && !o.en_lista_nueva ? el("button", {className:"mini pri", onclick: async () => {
         const f = confirmarSinVerificar(o.sin_verificar, o.lista); if (!f) return;
         if (!f.forzar && !confirm(`¿Ordenar ${o.lista} en Spotify? Se moverán ${o.movidas} canciones (no se borra ninguna).` +
           (o.peticiones > E.cupo.libres ? `\n\nSon ${o.peticiones} cambios y hoy quedan ${E.cupo.libres}: se para al llegar al límite y sigues otro día.` : ""))) return;
         try { await api("/api/spotify/aplicar", {lista:o.clave, forzar:f.forzar}); toast("Ordenando…"); pintarSpotify(); }
         catch (e) { toast(e.message); } }}, "aplicar en Spotify") : ""))));
   // ordenar todas de una vez (se para sola al llegar al cupo diario y se sigue otro día)
-  const pend = E.orden.filter(o => !o.fija && !o.ordenada), total = pend.reduce((s, o) => s + (o.peticiones || 0), 0);
+  const pend = E.orden.filter(o => !o.fija && !o.ordenada && !o.en_lista_nueva), total = pend.reduce((s, o) => s + (o.peticiones || 0), 0);
   const sinVer = pend.reduce((s, o) => s + o.sin_verificar, 0), c = E.cupo || {libres:0, limite:500, usadas:0};
   $("#ordTodas").replaceChildren(
     el("div", {className:"row"}, el("b", {}, pend.length ? `${pend.length} listas por ordenar · ${total} cambios en Spotify` : "Todas las listas están ordenadas"),
@@ -469,8 +473,12 @@ $("#copiaAhora").onclick = async () => {
 };
 
 // ── Ajustes → Tus listas: qué papel tiene cada lista (rules.json) ──
-const PAPELES = [["", "Lista normal"], ["mix", "Mix (todo)"], ["base", "Forma el Mix"], ["base-libre", "Forma el Mix, sin género obligatorio"],
-  ["epoca", "Época"], ["genero", "Género"], ["ignorar", "Ignorar"]];
+// Nombres generales (cada uno organiza sus listas a su manera); las claves de rules.json se mantienen por compatibilidad
+const PAPELES = [["", "Normal: se ordena por fecha"], ["mix", "General: une otras listas"], ["base", "Parte de la general"],
+  ["base-libre", "Parte de la general, sin género obligatorio"], ["epoca", "Época (por años)"], ["genero", "Género o estilo"],
+  ["ignorar", "Ignorar: no se lee"]];
+// Canciones que te gustan: Spotify no deja reordenarlas (van por fecha de añadido); como mucho, en una lista nueva
+const PAPELES_LIKED = [["", "Solo lectura: no se toca"], ["nueva", "Ordenar en una lista nueva"], ["ignorar", "Ignorar: no se lee"]];
 let TL = null;
 async function cargarTusListas() {
   try { TL = await api("/api/reglas"); } catch (e) { $("#tlEstado").textContent = "Error: " + e.message; return; }
@@ -481,8 +489,15 @@ async function cargarTusListas() {
     return;
   }
   $("#tlListas").replaceChildren(...TL.listas.map(l => {
-    if (l.solo_lectura) return el("tr", {}, el("td", {}, l.nombre), el("td", {}, fmt(l.n)),
-      el("td", {className:"muted small", colSpan:3}, "Solo lectura (canciones que te gustan): nunca se modifica"));
+    if (l.solo_lectura) {
+      const sel = el("select", {title:"Spotify no deja reordenar las canciones que te gustan: se pueden ordenar en una lista nueva"},
+        ...PAPELES_LIKED.map(([v, t]) => el("option", {value:v}, t)));
+      sel.value = TL.ignorar.includes(l.nombre) ? "ignorar" : TL.liked_ordenar ? "nueva" : "";
+      const tr = el("tr", {}, el("td", {}, l.nombre === "Liked_Songs" ? "Canciones que te gustan" : l.nombre),
+        el("td", {}, l.n == null ? "—" : fmt(l.n)), el("td", {colSpan:3}, sel));
+      tr._leer = () => ({nombre:l.nombre, papel:sel.value === "ignorar" ? "ignorar" : "", liked:sel.value});
+      return tr;
+    }
     const sel = el("select", {}, ...PAPELES.map(([v, t]) => el("option", {value:v}, t)));
     sel.value = papel(l.nombre);
     const rango = TL.decadas[l.nombre] || [null, null];
@@ -503,7 +518,8 @@ async function cargarTusListas() {
 $("#tlGuardar").onclick = async () => {
   const filas = [...$("#tlListas").querySelectorAll("tr")].filter(tr => tr._leer).map(tr => tr._leer());
   const de = p => filas.filter(f => f.papel === p).map(f => f.nombre);
-  const cuerpo = {mix:(filas.find(f => f.papel === "mix") || {}).nombre || "", idiomas:[...de("base"), ...de("base-libre")],
+  const cuerpo = {liked_ordenar:filas.some(f => f.liked === "nueva"),
+    mix:(filas.find(f => f.papel === "mix") || {}).nombre || "", idiomas:[...de("base"), ...de("base-libre")],
     friki:de("base-libre")[0] || "", generos:de("genero"), ignorar:de("ignorar"), no_reordenar:filas.filter(f => f.fija).map(f => f.nombre),
     decadas:Object.fromEntries(filas.filter(f => f.papel === "epoca").map(f => [f.nombre, [f.desde || null, f.hasta || null]]))};
   if (de("base-libre").length > 1) return toast("Solo una lista puede ir sin género obligatorio");

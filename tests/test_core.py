@@ -692,6 +692,39 @@ class TestSincroPendiente(unittest.TestCase):
         self.assertEqual(sincro._elegir_estado("spotify_pendiente.json", {"listas": ["Mix"]}, hecho), hecho)  # sin "m"
 
 
+class TestLikedEnListaNueva(unittest.TestCase):
+    def test_solo_si_se_pide(self):
+        cat = {t: Pista(id=t, titulo=t, artistas="A", album="", fecha_spotify=f) for t, f in (("a", "2001"), ("b", "1990"))}
+        listas = {"Liked_Songs": Lista(nombre="Liked_Songs", origen="", mtime=0, pistas=["a", "b"], solo_lectura=True)}
+        F = Fechas({"pistas": {}})
+        o = analisis.ordenar(listas, cat, F, {"excepciones": {}})[0]
+        self.assertTrue(o["fija"])  # por defecto no se toca
+        o = analisis.ordenar(listas, cat, F, {"excepciones": {}, "liked_ordenar": True})[0]
+        self.assertFalse(o["fija"])
+        self.assertTrue(o["en_lista_nueva"])
+        self.assertEqual(o["orden"], ["b", "a"])
+
+    def test_crear_o_rellenar(self):
+        from unittest import mock
+        from core import spotify
+        llamadas = []
+
+        def call(metodo, ruta, cuerpo=None, params=None):
+            llamadas.append((metodo, ruta, len((cuerpo or {}).get("uris", []))))
+            return {"id": "nueva"}
+        ids = [f"t{i}" for i in range(250)]
+        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: [{"id": "vieja"}]):
+            self.assertEqual(spotify.crear_o_rellenar("X", ids, None), "nueva")
+            self.assertEqual(llamadas, [("POST", "/me/playlists", 0), ("POST", "/playlists/nueva/items", 100),
+                                        ("POST", "/playlists/nueva/items", 100), ("POST", "/playlists/nueva/items", 50)])
+            llamadas.clear()
+            self.assertEqual(spotify.crear_o_rellenar("X", ids, "vieja"), "vieja")  # existe: se reemplaza su contenido
+            self.assertEqual(llamadas[0], ("PUT", "/playlists/vieja/items", 100))
+            llamadas.clear()
+            spotify.crear_o_rellenar("X", ids[:5], "borrada")  # ya no está entre tus listas: se crea otra
+            self.assertEqual(llamadas[0][:2], ("POST", "/me/playlists"))
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile

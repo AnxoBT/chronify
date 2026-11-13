@@ -66,6 +66,7 @@
   "ignorar": [
     "Saved_Albums"
   ],
+  "liked_ordenar": false,
   "solo_lectura": [
     "Liked_Songs"
   ],

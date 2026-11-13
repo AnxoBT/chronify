@@ -68,7 +68,7 @@ async function cargarStats() {
       el("div", {className:"sub", style:"margin-top:14px"}, "Los géneros más raros de tu música"),
       el("ul", {className:"lista-mini"}, ...s.nicho.generos.map(g => el("li", {}, el("b", {}, g.nombre),
         el("span", {className:"muted"}, ` · ${g.n} canción${g.n > 1 ? "es" : ""} · ${g.ej}`))))) : ""));
-  if (s.idiomas.series.length) grid.append(ancho(tarjeta("Listas del Mix por década", "Canciones de cada lista que forma el Mix según la década de la canción",
+  if (s.idiomas.series.length) grid.append(ancho(tarjeta("Listas de la general por década", "Canciones de cada lista que forma la lista general según la década de la canción",
     leyenda(s.idiomas.series.map(x => `${x.nombre} (${fmt(x.n)})`), SERIES), apiladas(s.idiomas.decadas, s.idiomas.series, SERIES, {alto:200}))));
   // sonido
   if (s.audio) {
