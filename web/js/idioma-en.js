@@ -735,6 +735,7 @@ exactos: {
   "→ tu app → Settings: pega esa Redirect URI exacta y marca Web API.": "→ your app → Settings: paste that exact Redirect URI and tick Web API.",
 },
 patrones: [
+  ["^(.+): ([\\d.,]+) canciones…$", "$1: $2 songs…"],
   ["^Escríbelos en el otro dispositivo · quedan (\\d+) s$", "Type them on the other device · $1 s left"],
   ["^aquí: (.+) · allí: (.+)$", "here: $1 · there: $2"],
   ["^Instalar Chronify v(.+)$", "Install Chronify v$1"],

@@ -1,8 +1,8 @@
 // Pestaña Estadísticas: tarjetas, Tu año, evolución, países sin buscar
 let ST = null;
-async function cargarStats() {
+async function cargarStats(silencioso = false) {  // silencioso: se queda lo de antes hasta tener lo nuevo (sin saltos)
   const sel = $("#stLista");
-  $("#stCuerpo").replaceChildren(el("div", {className:"muted"}, "Calculando…"));
+  if (!silencioso) $("#stCuerpo").replaceChildren(el("div", {className:"muted"}, "Calculando…"));
   try { ST = await api("/api/estadisticas" + (sel.value ? "?lista=" + encodeURIComponent(sel.value) : "")); }
   catch (e) { $("#stCuerpo").replaceChildren(el("div", {className:"error"}, "Error: " + e.message)); return; }
   if (ST.error) { $("#stCuerpo").replaceChildren(el("div", {className:"error"}, ST.error)); return; }
@@ -175,12 +175,24 @@ function evolucionTabla(fotos) {
         el("td", {}, fmt(f.paises) + dif(f.paises, p.paises)), el("td", {}, String(f.anio_mediana))); }))));
 }
 
+// tras corregir países: se recalcula todo (mapa, rankings…) al poco de la última corrección, sin perder la posición
+let REFRESCO_STATS = null;
+function refrescarStatsLuego() {
+  clearTimeout(REFRESCO_STATS);
+  REFRESCO_STATS = setTimeout(async () => {
+    if (!$("#stats").classList.contains("on")) return;  // al volver a la pestaña ya se recalcula
+    const y = scrollY;
+    await cargarStats(true);
+    scrollTo(0, y);
+  }, 1500);
+}
+
 function sinPais(lista) {
   const caja = el("div", {style:"max-height:330px;overflow:auto"});
   caja.append(...lista.slice(0, 150).map(a => {
     const inp = el("input", {size:3, maxLength:2, placeholder:"ES", style:"width:46px;padding:3px 6px"});
     const guardar = async () => {
-      try { await api("/api/artista", {nombre:a.nombre, pais:inp.value}); toast(`${a.nombre}: ${inp.value.toUpperCase()}`); fila.style.opacity = .4; }
+      try { await api("/api/artista", {nombre:a.nombre, pais:inp.value}); toast(`${a.nombre}: ${inp.value.toUpperCase()}`); fila.style.opacity = .4; refrescarStatsLuego(); }
       catch (e) { toast(e.message); } };
     inp.onkeydown = e => { if (e.key === "Enter") guardar(); };
     const fila = el("div", {className:"row", style:"gap:6px;margin:3px 0;font-size:13px"}, inp, el("button", {className:"mini", onclick:guardar}, "ok"),

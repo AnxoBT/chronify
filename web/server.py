@@ -54,7 +54,7 @@ def pendiente():
 def recargar():
     with LOCK:
         R = config.rules()
-        ESTADO["listas"], ESTADO["cat"] = exportify.cargar(R.get("ignorar", []), R.get("mix", ""),
+        ESTADO["listas"], ESTADO["cat"] = exportify.cargar(ignoradas(), R.get("mix", ""),
                                                           R.get("solo_lectura", []))
         ESTADO["cargado"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ESTADO["fuente"] = "Exportify (CSV)"
@@ -182,7 +182,7 @@ def _probar(log):
 def _leer(log):
     from core import spotify
     R = config.rules()
-    listas, cat = spotify.cargar(R.get("ignorar", []), R.get("solo_lectura", []), progreso=log)
+    listas, cat = spotify.cargar(ignoradas(), R.get("solo_lectura", []), progreso=log)
     try:  # la API ya no da géneros ni características de audio: se toman del último zip de Exportify si lo hay
         _, cat_csv = exportify.cargar(R.get("ignorar", []), R.get("mix", ""), R.get("solo_lectura", []))
         campos = ("generos", "sello", "bpm", "energia", "bailable", "tono", "modo", "valencia", "acustica", "habla",
@@ -238,7 +238,18 @@ def _cambiar_lista(tid, desde, hacia):
     return fn
 
 
-def _crear_ordenada(clave):
+def creadas():
+    """{lista: {"id", "nombre"}} de las listas que ha creado Chronify (p. ej. Liked por fecha)."""
+    return {k: (v if isinstance(v, dict) else {"id": v, "nombre": ""}) for k, v in config.cache_json(CREADAS).items()}
+
+
+def ignoradas():
+    """Listas que no se leen: las de Ajustes y las que crea Chronify (son copias: contarían dos veces las canciones)."""
+    R = config.rules()
+    return [*(R.get("ignorar") or []), *(c["nombre"] for c in creadas().values() if c.get("nombre"))]
+
+
+def _crear_ordenada(clave, idioma="es"):
     """Copia ordenada por fecha real de una lista que Spotify no deja reordenar (Liked) en una lista nueva tuya.
     La próxima vez se actualiza la misma lista (si no la has borrado)."""
     def fn(log):
@@ -249,13 +260,16 @@ def _crear_ordenada(clave):
         falta = 2 + len(o["orden"]) // 100
         if spotify.cupo()["libres"] < falta:
             raise ValueError(spotify._msg_cupo(spotify.cupo()))
-        nombre = ("Canciones que te gustan" if o["lista"] == "Liked_Songs" else o["lista"]) + " · por fecha"
-        creadas = config.cache_json(CREADAS)
+        en = idioma == "en"
+        base = ("Liked Songs" if en else "Canciones que te gustan") if o["lista"] == "Liked_Songs" else o["lista"]
+        nombre = base + (" · by date" if en else " · por fecha")
+        previas = creadas()
         log(f"{nombre}: {len(o['orden'])} canciones…")
-        pid = spotify.crear_o_rellenar(nombre, o["orden"], creadas.get(clave),
-                                       "Ordenada por la fecha real de cada canción (Chronify)")
-        nueva = creadas.get(clave) != pid
-        config.save_cache(CREADAS, {**creadas, clave: pid})
+        pid = spotify.crear_o_rellenar(nombre, o["orden"], (previas.get(clave) or {}).get("id"),
+                                       "Sorted by the real release date of every song (Chronify)" if en
+                                       else "Ordenada por la fecha real de cada canción (Chronify)")
+        nueva = (previas.get(clave) or {}).get("id") != pid
+        config.save_cache(CREADAS, {**previas, clave: {"id": pid, "nombre": nombre}})
         log(f"{nombre}: {'creada' if nueva else 'actualizada'} en Spotify")
         historial.registrar("spotify", f"{nombre}: {'creada' if nueva else 'actualizada'} ({len(o['orden'])} canciones)")
         return {"id": pid, "nombre": nombre}
@@ -919,7 +933,7 @@ class H(BaseHTTPRequestHandler):
                 fn = _ordenar([o["clave"] for o in analisis.ordenar(ESTADO["listas"], ESTADO["cat"])
                                if not o["fija"] and not o["ordenada"] and not o["en_lista_nueva"]], bool(b.get("forzar")))
             elif nombre == "crear_ordenada":
-                fn = _crear_ordenada(b.get("lista", ""))
+                fn = _crear_ordenada(b.get("lista", ""), "en" if b.get("idioma") == "en" else "es")
             elif nombre == "seguir":
                 p = pendiente() or {}
                 if not p.get("listas"):

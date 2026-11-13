@@ -6,6 +6,7 @@ pero leer y reordenar listas propias sigue disponible. El token se guarda en cac
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 import bisect
@@ -13,7 +14,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from core.config import cache_json, env, save_cache
+from core.config import cache_json, env, norm, save_cache
 from core.red import abrir as _abrir
 
 AUTH = "https://accounts.spotify.com/authorize"
@@ -336,10 +337,11 @@ def cargar(ignorar=(), solo_lectura=(), progreso=None):
     from core.exportify import Lista, Pista
     yo_id = yo()["id"]
     listas, catalogo = {}, {}
+    fuera = {norm(n) for n in ignorar}
     propias = [pl for pl in mis_listas() if pl and (pl.get("owner") or {}).get("id") == yo_id
-               and pl.get("name") not in ignorar]
+               and norm(pl.get("name") or "") not in fuera]
     fuentes = [(pl["name"], pl["id"], pl.get("snapshot_id")) for pl in propias]
-    if "Liked_Songs" not in ignorar:  # canciones que te gustan: siempre de solo lectura
+    if norm("Liked_Songs") not in fuera:  # canciones que te gustan: siempre de solo lectura
         fuentes.append(("Liked_Songs", None, None))
     leido, releidas = _lectura_incremental(fuentes, progreso)
     for nombre, pid, _ in fuentes:
@@ -369,7 +371,9 @@ def crear_o_rellenar(nombre, ids, pid=None, descripcion=""):
         cuerpo = {"name": nombre, "public": False, "description": descripcion}
         try:
             pid = call("POST", "/me/playlists", cuerpo)["id"]
-        except RuntimeError:  # endpoint antiguo
+        except RuntimeError as e:  # solo si este endpoint no existe: entonces el antiguo
+            if not re.search(r": (404|405) ", str(e)):
+                raise
             pid = call("POST", f"/users/{yo()['id']}/playlists", cuerpo)["id"]
         if uris:
             call("POST", f"/playlists/{pid}/items", {"uris": uris[:100]})

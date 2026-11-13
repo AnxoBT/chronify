@@ -132,9 +132,9 @@ def cargar(ignorar=(), mix="", solo_lectura=()):
     cands = [(unicodedata.normalize("NFC", n), *rest) for n, *rest in _candidatos()]
     zips = [c[3] for c in cands if c[4]]
     corte = max(zips) if zips else 0
-    elegidos = {}
+    elegidos, fuera = {}, {norm(n) for n in ignorar}  # "Mi lista" = "Mi_lista" (nombre del CSV)
     for nombre, texto, origen, mtime, _ in cands:
-        if mtime < corte or nombre in ignorar:
+        if mtime < corte or norm(nombre) in fuera:
             continue
         if nombre not in elegidos or mtime > elegidos[nombre][3]:
             elegidos[nombre] = (nombre, texto, origen, mtime)

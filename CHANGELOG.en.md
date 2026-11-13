@@ -2,6 +2,15 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.0.1 — 2026-11-13
+
+- When you fix an artist's country in Statistics, the map and rankings update by themselves (without leaving the tab
+  or losing your place). Marking a date as correct now also updates Checks and Summary.
+- The "Liked Songs · by date" playlist is created with its name in the app's language and is no longer counted as
+  another playlist (it doesn't duplicate songs in Statistics or Checks).
+- Ignored playlists are recognised even if the Exportify CSV name has underscores or no accents.
+- Creating playlists in Spotify only falls back to the old method if the new one doesn't exist.
+
 ## v1.0.0 — 2026-11-13
 
 First public release.

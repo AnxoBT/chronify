@@ -862,6 +862,40 @@ class TestWifi(unittest.TestCase):
                 wifi.parar()
 
 
+class TestListasCreadas(unittest.TestCase):
+    def test_no_se_cuentan_dos_veces(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        from core import config, exportify
+        from tests.ejemplo import zip_ejemplo
+        from web import server as S
+        with mock.patch.object(config, "cache_json", lambda n, d=None: {"Liked_Songs": {"id": "x", "nombre": "Mis favoritas"}}
+                               if n == S.CREADAS else {}), mock.patch.object(config, "rules", lambda: {"ignorar": ["Saved_Albums"]}):
+            ign = S.ignoradas()
+        self.assertEqual(ign, ["Saved_Albums", "Mis favoritas"])
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "spotify_playlists.zip").write_bytes(zip_ejemplo())
+            with mock.patch.object(exportify, "export_dirs", lambda: [Path(d)]):
+                listas, _ = exportify.cargar(["mis_FAVORITAS"], "", [])  # mismo nombre escrito distinto
+        self.assertNotIn("Mis favoritas", listas)
+
+    def test_endpoint_antiguo_solo_si_no_existe(self):
+        from unittest import mock
+        from core import spotify
+        llamadas = []
+
+        def call(m, ruta, cuerpo=None, params=None):
+            llamadas.append(ruta)
+            if ruta == "/me/playlists" and m == "POST":
+                raise RuntimeError("Spotify POST /me/playlists: 500 error")
+            return {"id": "n"}
+        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: []):
+            with self.assertRaises(RuntimeError):  # un 500 no es "no existe": no se prueba el otro
+                spotify.crear_o_rellenar("X", ["a"])
+        self.assertNotIn("/users/", " ".join(llamadas))
+
+
 class TestHistorial(unittest.TestCase):
     def test_uids_unicos_y_no_deshace_si_cambio_despues(self):
         import tempfile

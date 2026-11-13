@@ -1,5 +1,14 @@
 # Cambios
 
+## v1.0.1 — 2026-11-13
+
+- Al corregir el país de un artista en Estadísticas, el mapa y los rankings se actualizan solos (sin salir de la
+  pestaña ni perder la posición). Al marcar una fecha como correcta se actualizan también Comprobaciones y Resumen.
+- La lista "Canciones que te gustan · por fecha" se crea con el nombre en el idioma de la app ("Liked Songs · by date")
+  y ya no se cuenta como una lista más (no duplica canciones en Estadísticas ni en Comprobaciones).
+- Listas ignoradas: se reconocen aunque el nombre del CSV de Exportify lleve guiones bajos o sin tildes.
+- Crear listas en Spotify solo usa el método antiguo si el nuevo no existe.
+
 ## v1.0.0 — 2026-11-13
 
 Primera versión pública.

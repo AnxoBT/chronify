@@ -161,7 +161,7 @@ function pintarOrden() {
       E.android ? "" : el("a", {href:"/api/txt?lista=" + encodeURIComponent(o.clave), download:o.lista + ".txt"}, "descargar"),
       api_ && o.en_lista_nueva ? el("button", {className:"mini pri", title:"Crea (o actualiza) en Spotify una lista con estas canciones ordenadas por fecha real",
         onclick: async () => {
-          try { await api("/api/spotify/crear_ordenada", {lista:o.clave}); toast("Creando la lista…"); pintarSpotify(); }
+          try { await api("/api/spotify/crear_ordenada", {lista:o.clave, idioma:IDIOMA}); toast("Creando la lista…"); pintarSpotify(); }
           catch (e) { toast(e.message); } }}, "crear lista ordenada") : "",
       api_ && !o.fija && !o.ordenada && !o.en_lista_nueva ? el("button", {className:"mini pri", onclick: async () => {
         const f = confirmarSinVerificar(o.sin_verificar, o.lista); if (!f) return;
@@ -217,7 +217,7 @@ async function cargarFechas() {
     el("td", {className:"muted small"}, p.spotify),
     el("td", {className:"row"}, el("button", {className:"mini", onclick: () => editarFecha(p)}, "editar"),
       el("button", {className:"mini", title:"La fecha actual es correcta", onclick: async () => {
-        await api("/api/fecha", {id:p.id, fecha:p.fecha}); toast("Marcada como verificada"); cargarFechas(); }}, "es correcta"), link(p.id)))));
+        await api("/api/fecha", {id:p.id, fecha:p.fecha}); toast("Marcada como verificada"); cargar(); cargarFechas(); }}, "es correcta"), link(p.id)))));
 }
 $("#filtro").onchange = cargarFechas;
 
