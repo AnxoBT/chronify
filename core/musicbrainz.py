@@ -114,3 +114,63 @@ def buscar(pista):
     cache[k] = res
     save_cache(CACHE, cache)
     return res
+
+
+# Discos que no son la grabación original de estudio
+_NO_ESTUDIO = {"Live", "Compilation", "Remix", "DJ-mix", "Mixtape/Street", "Demo", "Interview", "Spokenword"}
+_NO_ORIGINAL = re.compile(r"\b(live|en directo|en vivo|demo|remix|acoustic|ac[uú]stic\w*|instrumental|karaoke|"
+                          r"unplugged|re-?recorded|sped up|slowed|cover)\b", re.I)
+
+
+def _titulo(s):
+    return re.sub(r"^the", "", _clave(limpiar(s)))
+
+
+def original(pista, cache=None, fecha=""):
+    """Disco original de estudio de la canción según MusicBrainz: {'disco', 'tipo', 'fecha', 'single'?}
+    ('single' = fecha del single si salió antes que el disco). '' si no lo encuentra.
+    'fecha' = fecha real de la canción: solo se miran grabaciones publicadas hasta ese año (+1), si no la original se
+    pierde entre cientos de recopilatorios. Con 'cache' (el contenido de musicbrainz.json) solo mira la caché: None si
+    aún no se ha buscado."""
+    from core.analisis import _RECOPILATORIO
+    artista = pista.artistas.split(";")[0]
+    titulo = limpiar(pista.titulo)
+    k = f"orig1|{_clave(artista)}|{_clave(titulo)}"
+    if cache is not None:
+        return cache.get(k)
+    todo = cache_json(CACHE)
+    if k in todo:
+        return todo[k]
+    q = f'recording:"{titulo}" AND artist:"{artista}"'
+    if (fecha or "")[:4].isdigit():
+        q += f" AND firstreleasedate:[1000 TO {int(fecha[:4]) + 1}]"
+    recs = [rec for rec in _get(f"{API}?query={quote(q)}&fmt=json&limit=100").get("recordings", [])
+            if rec.get("score", 0) >= 70 and _titulo(rec.get("title", "")) == _titulo(titulo) and not rec.get("video")
+            and _clave(artista) in _clave(" ".join(c.get("name", "") + c.get("artist", {}).get("name", "")
+                                                  for c in rec.get("artist-credit", [])))
+            and not _NO_ORIGINAL.search(rec.get("disambiguation", ""))
+            and not _NO_ORIGINAL.search(" ".join(re.findall(r"[(\[]([^)\]]*)[)\]]", rec.get("title", ""))))]
+    res = ""
+    # la grabación original es la publicada antes; de ella, su primer disco (el álbum si salió ese mismo año)
+    for rec in sorted(recs, key=lambda r: r.get("first-release-date") or "9999"):
+        discos = []
+        for rel in rec.get("releases", []):
+            rg = rel.get("release-group") or {}
+            nombre = rg.get("title") or rel.get("title", "")
+            if (rel.get("status") in (None, "Official") and re.match(r"^\d{4}", rel.get("date") or "")
+                    and not set(rg.get("secondary-types") or []) & _NO_ESTUDIO and not _RECOPILATORIO.search(nombre)
+                    and rg.get("primary-type") in ("Album", "Single", "EP")):
+                discos.append((rel["date"], rg["primary-type"], nombre))
+        if not discos:
+            continue
+        primero = min(discos)
+        albumes = sorted(d for d in discos if d[1] == "Album" and d[0][:4] == primero[0][:4])
+        fecha_, tipo, disco = (albumes or [primero])[0]
+        res = {"disco": disco, "tipo": tipo, "fecha": fecha_}
+        if tipo == "Album" and primero[1] != "Album" and primero[0] < fecha_:
+            res["single"] = primero[0]
+        break
+    todo = cache_json(CACHE)  # otra búsqueda pudo guardar mientras tanto
+    todo[k] = res
+    save_cache(CACHE, todo)
+    return res

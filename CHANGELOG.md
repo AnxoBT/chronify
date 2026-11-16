@@ -1,5 +1,17 @@
 # Cambios
 
+## v1.1.0 — 2026-11-16
+
+- **Versión buena**: en Comprobaciones, las canciones en directo, remezcladas, de recopilatorio o reediciones dicen cuál es
+  el disco original (según MusicBrainz, gratis y sin cuenta) y, si lees por la API, cuál es esa versión en Spotify, con
+  botón para escucharla y para cambiarla en todas tus listas (mismo sitio y misma fecha). Sin la API, enlace para
+  buscarla en Spotify. Lo ya buscado no se vuelve a buscar.
+- **Canciones que ya no están en Spotify** (salen en gris): nuevo aviso en Comprobaciones (leyendo por la API).
+  Si Spotify cambió tu copia por otra que sí suena, se sigue reconociendo la tuya.
+- Los enlaces a canciones abren la **app de Spotify** del PC si la tienes instalada.
+- "La misma canción dos veces" detecta también títulos con el nombre alternativo entre paréntesis
+  (p. ej. *Bang A Gong (Get It On)* y *Get It On*).
+
 ## v1.0.1 — 2026-11-13
 
 - Al corregir el país de un artista en Estadísticas, el mapa y los rankings se actualizan solos (sin salir de la

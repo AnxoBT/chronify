@@ -11,7 +11,14 @@ const api = async (url, body) => {
   return (r.headers.get("Content-Type") || "").includes("json") ? r.json() : r.text();
 };
 function toast(m) { const t = $("#toast"); t.textContent = m; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 2500); }
-const link = id => el("a", {href:`https://open.spotify.com/track/${id}`, target:"_blank", rel:"noopener"}, "abrir");
+// Enlace a Spotify: con la app de escritorio instalada (E.spotify_app) la abre directamente (spotify:…); si no, la web
+// (en el móvil el sistema ya pasa los open.spotify.com a la app). tipo = "track" | "search"
+const enlaceSpotify = (tipo, x, texto, extra = {}) => {
+  const app = typeof E !== "undefined" && E && E.spotify_app;
+  return el("a", {href: app ? `spotify:${tipo}:${encodeURIComponent(x)}` : `https://open.spotify.com/${tipo}/${encodeURIComponent(x)}`,
+    ...(app ? {} : {target:"_blank", rel:"noopener"}), ...extra}, texto);
+};
+const link = id => enlaceSpotify("track", id, "abrir");
 
 document.querySelectorAll("#nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("#nav button, section").forEach(x => x.classList.remove("on"));

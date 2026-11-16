@@ -41,6 +41,7 @@ class Pista:
     habla: float | None = None
     volumen: float | None = None  # dB
     album_tipo: str = ""  # album | single | compilation (solo por la API)
+    disponible: bool = True  # False: Spotify ya no la puede reproducir en tu país (solo se sabe por la API)
 
     @property
     def url(self):

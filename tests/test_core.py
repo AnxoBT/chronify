@@ -297,6 +297,11 @@ class TestCopias(unittest.TestCase):
                "c": Pista(id="c", titulo="ウィーアー!", artistas="Kitadani", album="", fecha_spotify="1999"),
                "d": Pista(id="d", titulo="ウィーゴー！", artistas="Kitadani", album="", fecha_spotify="2011")}
         self.assertEqual(analisis.duplicadas_por_copia(cat, cat), [["a", "b"]])  # el japonés no se junta
+        alt = {"g": Pista(id="g", titulo="Get It On", artistas="T. Rex", album="", fecha_spotify="1971"),
+               "b": Pista(id="b", titulo="Bang A Gong (Get It On) (Electric Version)", artistas="T. Rex", album="", fecha_spotify="1971"),
+               "s": Pista(id="s", titulo="Solo Dolo (Nightmare)", artistas="Kid Cudi", album="", fecha_spotify="2009"),
+               "d": Pista(id="d", titulo="Day 'N' Nite (Nightmare)", artistas="Kid Cudi", album="", fecha_spotify="2009")}
+        self.assertEqual(analisis.duplicadas_por_copia(alt, alt), [["b", "g"]])  # el paréntesis compartido no basta
 
     def test_buscar_principal(self):
         from unittest import mock
@@ -361,6 +366,7 @@ class TestLecturaIncremental(unittest.TestCase):
         from unittest import mock
         from core import spotify
         guardado = {spotify.LECTURA_CACHE: {
+            "_version": spotify.LECTURA_VERSION,
             "A": {"firma": "s1", "items": [{"id": "a"}]},
             "B": {"firma": "viejo", "items": [{"id": "b"}]},
             "_liked": {"firma": "3:z", "items": [{"id": "z"}, {"id": "y"}, {"id": "x"}]}}}
@@ -379,6 +385,67 @@ class TestLecturaIncremental(unittest.TestCase):
         self.assertEqual(n, 2)
         self.assertNotIn("A", leidas)
         self.assertEqual(guardado[spotify.LECTURA_CACHE]["B"]["firma"], "s2")
+
+
+class TestVersionBuena(unittest.TestCase):
+    def test_original_musicbrainz(self):
+        from unittest import mock
+        from core import musicbrainz
+        mia = Pista(id="x", titulo="Still Loving You - Live", artistas="Scorpions", album="Comeblack", fecha_spotify="2011")
+        rg = lambda t, tipo, sec=(): {"title": t, "primary-type": tipo, "secondary-types": list(sec)}
+        res = {"recordings": [
+            {"score": 100, "title": "Still Loving You", "artist-credit": [{"name": "Scorpions"}], "disambiguation": "live", "releases": [
+                {"status": "Official", "date": "1979", "release-group": rg("Tokyo Tapes", "Album")}]},
+            {"score": 100, "title": "Still Loving You", "artist-credit": [{"name": "Scorpions"}], "releases": [
+                {"status": "Official", "date": "1990", "release-group": rg("Best of Rockers", "Album", ["Compilation"])},
+                {"status": "Official", "date": "1984-03-27", "release-group": rg("Love at First Sting", "Album")},
+                {"status": "Official", "date": "1984-01", "release-group": rg("Still Loving You", "Single")}]},
+            {"score": 100, "title": "Still Loving You", "artist-credit": [{"name": "Otra"}], "releases": [
+                {"status": "Official", "date": "1970", "release-group": rg("Cover", "Album")}]}]}
+        guardado = {}
+        with mock.patch.object(musicbrainz, "_get", return_value=res),              mock.patch.object(musicbrainz, "cache_json", lambda n, d=None: guardado.get(n, {})),              mock.patch.object(musicbrainz, "save_cache", lambda n, d: guardado.__setitem__(n, d)):
+            o = musicbrainz.original(mia)
+        self.assertEqual(o, {"disco": "Love at First Sting", "tipo": "Album", "fecha": "1984-03-27", "single": "1984-01"})
+        self.assertEqual(musicbrainz.original(mia, cache=guardado[musicbrainz.CACHE]), o)
+        self.assertIsNone(musicbrainz.original(Pista(id="y", titulo="Otra", artistas="X", album="", fecha_spotify=""), cache={}))
+
+    def test_buscar_original_spotify(self):
+        from unittest import mock
+        from core import spotify
+        mia = Pista(id="x", titulo="Still Loving You - Live", artistas="Scorpions", album="Comeblack", fecha_spotify="2011")
+        t = lambda i, nombre, alb, tipo, fecha, **k: {"id": i, "name": nombre, "artists": [{"name": "Scorpions"}],
+                                                     "album": {"name": alb, "album_type": tipo, "release_date": fecha}, **k}
+        res = {"tracks": {"items": [
+            t("x", "Still Loving You - Live", "Comeblack", "album", "2011"),
+            t("r", "Still Loving You - Remastered 2015", "Love at First Sting (Remastered)", "album", "2015"),
+            t("c", "Still Loving You", "Best of Rockers 'n' Ballads", "compilation", "1990"),
+            t("g", "Still Loving You", "Love at First Sting", "album", "1984-03-27", is_playable=False),
+            t("o", "Still Loving You", "Love at First Sting", "album", "1984-03-27")]}}
+        mb = {"disco": "Love at First Sting", "tipo": "Album", "fecha": "1984-03-27"}
+        with mock.patch.object(spotify, "call", return_value=res):
+            self.assertEqual(spotify.buscar_original(mia, mb, "1984-03-27")["id"], "o")
+        # si la original es el directo (la fecha real es la del directo), una de estudio posterior no vale
+        tarde = {"tracks": {"items": [t("e", "Still Loving You", "Otro disco", "album", "2013")]}}
+        with mock.patch.object(spotify, "call", return_value=tarde):
+            self.assertIsNone(spotify.buscar_original(mia, None, "1993"))
+        # una remasterizada no se cambia por otra remasterizada
+        rem = Pista(id="r", titulo="Still Loving You - Remastered 2015", artistas="Scorpions", album="X", fecha_spotify="2015")
+        solo = {"tracks": {"items": [t("r2", "Still Loving You - 2011 Remaster", "Y", "album", "2011")]}}
+        with mock.patch.object(spotify, "call", return_value=solo):
+            self.assertIsNone(spotify.buscar_original(rem, None, "1984"))
+
+    def test_no_disponible(self):
+        from core import spotify
+        x = spotify._item({"track": {"id": "nuevo", "uri": "spotify:track:nuevo", "is_playable": True,
+                                     "linked_from": {"id": "viejo", "uri": "spotify:track:viejo"}}})
+        self.assertEqual((x["id"], x["uri"], x["disponible"]), ("viejo", "spotify:track:viejo", True))
+        self.assertFalse(spotify._item({"track": {"id": "g", "is_playable": False}})["disponible"])
+        cat = {"g": Pista(id="g", titulo="T", artistas="A", album="", fecha_spotify="2000", disponible=False)}
+        listas = {"L": Lista(nombre="L", origen="", mtime=0, pistas=["g"])}
+        tipos = [a["tipo"] for a in analisis.comprobar(listas, cat, Fechas(), {"excepciones": {}})]
+        self.assertIn("no_disponible", tipos)
+        tipos = [a["tipo"] for a in analisis.comprobar(listas, cat, Fechas(), {"excepciones": {"no_disponible": ["g"]}})]
+        self.assertNotIn("no_disponible", tipos)
 
 
 class TestCopia(unittest.TestCase):

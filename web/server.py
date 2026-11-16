@@ -148,20 +148,28 @@ def resumen():
     mias = propias()
     aprox = sum(1 for t in mias if F.info(t, C.get(t))[2])
     avisos = analisis.comprobar(L, C, F)
-    copias = config.cache_json(COPIAS)
-    for a in avisos:  # versión principal ya buscada de las copias poco escuchadas
-        if a.get("categoria") == "copia":
-            for p in a["pistas"]:
-                if p["id"] in copias:
-                    p["principal"] = copias[p["id"]].get("propuesta") or False
+    _versiones_buenas(avisos)
     return {"cargado": ESTADO["cargado"], "fuente": ESTADO["fuente"], "carpetas": [str(d) for d in config.export_dirs()],
             "listas": exportify.describir(L), "avisos": avisos,
             "orden": [{**{k: v for k, v in o.items() if k not in ("orden", "sin_verificar")},
                        "sin_verificar": len(o["sin_verificar"]), "peticiones": peticiones(o)} for o in orden],
             "fechas": {"total": len(mias), "aprox": aprox}, "cupo": spotify.cupo(),
             "pendiente": pendiente(),
-            "android": bool(os.environ.get("CHRONIFY_ANDROID")), "web": ES_WEB,
+            "android": bool(os.environ.get("CHRONIFY_ANDROID")), "web": ES_WEB, "spotify_app": spotify_app(),
             "bloqueado": (lambda h: time.strftime("%d/%m %H:%M", time.localtime(h)) if h else None)(spotify.bloqueado_hasta())}
+
+
+def spotify_app():
+    """¿Está instalada la app de Spotify de escritorio? (Windows: registra el protocolo spotify:). Entonces los enlaces
+    abren la app en vez del navegador. En Android y la web ya lo hace el sistema con los enlaces open.spotify.com."""
+    if os.name != "nt" or ES_WEB:
+        return False
+    try:
+        import winreg
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "spotify"))
+        return True
+    except OSError:
+        return False
 
 
 def _tarea(nombre, fn):
@@ -361,25 +369,67 @@ def _ordenar(nombres, forzar=False):
     return fn
 
 
-COPIAS = "copias.json"  # {id copia: {"propuesta": {...} | None, "hecho": bool}}
+COPIAS = "copias.json"  # {id: {"propuesta": {...} | None, "hecho": bool}}: versión buena en Spotify de cada canción
+
+
+def _es_copia(p):
+    """Copia poco escuchada o no disponible: se busca otra copia de la misma grabación (no el disco original)."""
+    ms = analisis.motivos_version(p)
+    return not p.disponible or bool(ms) and ms[0][0] == "copia"
+
+
+def _versiones_buenas(avisos):
+    """Añade a las canciones de los avisos de versión lo ya buscado: 'original' (disco original según MusicBrainz,
+    False si no lo conoce), 'principal' (la buena en Spotify, False si no hay) y 'buscar' (texto para Spotify)."""
+    from core import musicbrainz
+    copias, mbc, C = config.cache_json(COPIAS), config.cache_json(musicbrainz.CACHE), ESTADO["cat"]
+    for a in avisos:
+        if a["tipo"] not in ("version_dudosa", "no_disponible"):
+            continue
+        for p in a["pistas"]:
+            q = C.get(p["id"])
+            if not q:
+                continue
+            p["copia"] = _es_copia(q)
+            p["buscar"] = f"{q.artistas.split(';')[0]} {musicbrainz.limpiar(q.titulo)}"
+            if not p["copia"]:
+                o = musicbrainz.original(q, cache=mbc)
+                if o is not None:
+                    p["original"] = o or False
+            if "propuesta" in (copias.get(p["id"]) or {}):
+                p["principal"] = copias[p["id"]]["propuesta"] or False
 
 
 def _buscar_copias(ids):
-    """Busca en Spotify la copia principal de cada canción (solo lecturas, no gasta cupo de escrituras)."""
+    """Busca la versión buena de cada canción: el disco original en MusicBrainz (gratis, sin cuenta) y, si lees por
+    la API, esa versión en Spotify (solo lecturas, no gasta cupo de escrituras). Lo ya buscado no se repite."""
     def fn(log):
-        from core import spotify
-        C, hechas = ESTADO["cat"], config.cache_json(COPIAS)
+        from core import musicbrainz, spotify
+        C, hechas, F = ESTADO["cat"], config.cache_json(COPIAS), Fechas()
+        api_ = ESTADO["fuente"] == "Spotify (API)"
         encontradas = 0
         for i, t in enumerate(ids, 1):
+            if SP["cancelar"]:
+                break
             p = C.get(t)
-            if not p or t in hechas:  # ya buscada antes
+            if not p:
                 continue
-            SP["log"][:] = [f"Buscando la versión principal {i}/{len(ids)}: {p.etiqueta()}"]
-            prop = spotify.buscar_principal(p)
-            hechas[t] = {"propuesta": prop, "hecho": False}
-            encontradas += bool(prop)
-            config.save_cache(COPIAS, hechas)
-        log(f"Encontrada la versión principal de {encontradas} de {len(ids)} canciones")
+            SP["log"][:] = [f"Buscando la versión buena {i}/{len(ids)}: {p.etiqueta()}"]
+            mb = None
+            if not _es_copia(p):
+                try:
+                    mb = musicbrainz.original(p, fecha=F.info(t, p)[0]) or None
+                except Exception as e:  # sin red o MusicBrainz caído: se sigue con Spotify
+                    log(f"MusicBrainz: {e}")
+            if api_ and "propuesta" not in (hechas.get(t) or {}):
+                prop = (spotify.buscar_principal(p) if _es_copia(p)
+                        else spotify.buscar_original(p, mb, F.info(t, p)[0]))
+                hechas[t] = {"propuesta": prop, "hecho": False}
+                config.save_cache(COPIAS, hechas)
+                encontradas += bool(prop)
+            else:
+                encontradas += bool(mb)
+        log(f"Encontrada la versión buena de {encontradas} de {len(ids)} canciones")
         return {"encontradas": encontradas}
     return fn
 
@@ -412,7 +462,8 @@ def _cambiar_copias(ids):
                 else:
                     l.pistas = spotify.reemplazar(l.spotify_id, t, nuevo, l.pistas)
             if p:  # la canción nueva hereda los datos de la copia
-                C[nuevo] = dataclasses.replace(p, id=nuevo, album=prop["album"], fecha_spotify=prop["fecha"] or p.fecha_spotify,
+                C[nuevo] = dataclasses.replace(p, id=nuevo, titulo=prop.get("titulo") or p.titulo, album=prop["album"],
+                                               fecha_spotify=prop["fecha"] or p.fecha_spotify, disponible=True,
                                                popularidad=prop["popularidad"], album_tipo=prop["album_tipo"])
             if t in F.pistas:
                 F.pistas[nuevo] = dict(F.pistas[t])
@@ -426,7 +477,7 @@ def _cambiar_copias(ids):
             copias[t]["hecho"] = True
             config.save_cache(COPIAS, copias)
             hechas += 1
-            historial.registrar("spotify", f"{p.etiqueta() if p else t}: cambiada por la versión principal "
+            historial.registrar("spotify", f"{p.etiqueta() if p else t}: cambiada por la versión buena "
                                 f"({prop['album']}) en {', '.join(l.nombre for l in donde)}", id=t)
             log(f"{p.etiqueta() if p else t} → {prop['album']} ({len(donde)} listas)")
         log(f"Cambiadas {hechas} canciones")

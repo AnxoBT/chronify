@@ -89,6 +89,19 @@ Una pista por línea (diffs legibles). Campos: `fecha`, `fuente` (`spotify` | `o
   `rules.json > generos_spotify` sobre los géneros de Spotify. Sin época → por su fecha. Botón "añadir a …"
   (solo fuente API) la añade en su sitio cronológico.
 - Ordenar avisa de canciones con fecha de Spotify sin verificar (`sin_verificar`) y no las coloca salvo "ordenar igualmente".
+- **Versión buena** (avisos de versión dudosa y no disponibles, botón "Buscar la versión buena" →
+  `/api/spotify/buscar_copias`, `server._buscar_copias`): sin API, `musicbrainz.original(pista, fecha=fecha real)` = disco
+  original de estudio (grabación con `firstreleasedate` ≤ año real + 1, la publicada antes; su primer disco no directo ni
+  recopilatorio; el álbum si salió ese año, si no single/EP) en `cache/musicbrainz.json` (`orig1|…`) + enlace "buscar en
+  Spotify". Con API además `spotify.buscar_original` (búsqueda en el disco de MB y por título; descarta directos, remixes,
+  recopilatorios y lo publicado después de la fecha real salvo el disco de MB; None si no mejora la tuya) o, para copias y
+  no disponibles, `buscar_principal`; resultado en `cache/copias.json` y se cambia con `_cambiar_copias`.
+- Enlaces a Spotify: `enlaceSpotify()` (base.js). Si `server.spotify_app()` (Windows: protocolo `spotify` en el
+  registro) → `spotify:track:…`/`spotify:search:…` (abre la app de escritorio); si no, open.spotify.com (Android/iPhone
+  ya pasan esos enlaces a la app instalada).
+- **No disponible** (`no_disponible`): solo por API. Se lee con `market=from_token` → `is_playable`; si Spotify
+  "re-enlaza" otra copia (`linked_from`) se guarda el id original. `LECTURA_VERSION` en spotify.py: al subirlo se relee
+  todo una vez. Excepción `no_disponible` ("ignorar").
 - **Misma canción dos veces** (`duplicadas_por_copia`): mismo ISRC o misma `clave_cancion` (primer artista + título
   sin versión; conserva letras no latinas para no juntar canciones japonesas distintas). Excepción `misma_cancion`.
 - **Copia poco escuchada** (popularidad 0–5): `spotify.buscar_principal` (búsqueda por ISRC y título+artista, mismo

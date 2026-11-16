@@ -240,7 +240,7 @@ def mis_listas():
 def items(playlist_id):
     """[{id, added_at, uri}] en orden. Solo listas propias o colaborativas (limitación del modo desarrollo)."""
     out, url, total = [], f"/playlists/{playlist_id}/items", None
-    params = {"limit": 100, "additional_types": "track"}
+    params = {"limit": 100, "additional_types": "track", "market": "from_token"}
     while url:
         d = call("GET", url, params=params)
         total = d.get("total", total)
@@ -256,16 +256,18 @@ def _item(it):
     if t.get("type", "track") != "track":
         t = {}
     alb = t.get("album") or {}
+    if t.get("linked_from"):  # Spotify pone otra copia que sí suena en tu país: el id de tu lista es el original
+        t = {**t, "id": t["linked_from"].get("id"), "uri": t["linked_from"].get("uri")}
     return {"id": t.get("id"), "uri": t.get("uri"), "added_at": it.get("added_at"), "nombre": t.get("name", ""),
             "artistas": ";".join(a.get("name", "") for a in t.get("artists", [])), "album": alb.get("name", ""),
             "fecha": alb.get("release_date", ""), "isrc": (t.get("external_ids") or {}).get("isrc", ""),
             "duracion": t.get("duration_ms"), "popularidad": t.get("popularity"), "explicita": bool(t.get("explicit")),
-            "album_tipo": alb.get("album_type", "")}
+            "album_tipo": alb.get("album_type", ""), "disponible": t.get("is_playable") is not False}
 
 
 def guardadas(limite=None):
     """Canciones que te gustan (solo lectura), de la más reciente a la más antigua."""
-    out, url, params, total = [], "/me/tracks", {"limit": limite or 50}, None
+    out, url, params, total = [], "/me/tracks", {"limit": limite or 50, "market": "from_token"}, None
     while url:
         d = call("GET", url, params=params)
         total = d.get("total", total)
@@ -279,6 +281,7 @@ def guardadas(limite=None):
 
 
 LECTURA_CACHE = "spotify_listas.json"
+LECTURA_VERSION = 2  # 2: con 'disponible' (si cambia, la próxima lectura vuelve a descargar todo una vez)
 
 
 def _liked_nuevas(previas, total, sin_id=0):
@@ -286,7 +289,7 @@ def _liked_nuevas(previas, total, sin_id=0):
     Si no cuadra con el total (has quitado alguna), se lee entera. 'sin_id': pistas locales o no disponibles que
     había antes (Spotify las cuenta en el total, pero no se guardan)."""
     if previas:
-        nuevas, url, params = [], "/me/tracks", {"limit": 50}
+        nuevas, url, params = [], "/me/tracks", {"limit": 50, "market": "from_token"}
         while url and len(nuevas) <= total:
             d = call("GET", url, params=params)
             pag = [_item(it) for it in d.get("items", [])]
@@ -307,7 +310,9 @@ def _lectura_incremental(fuentes, progreso=None):
 
     fuentes: [(nombre, playlist_id | None para Liked, snapshot)]. Devuelve ({nombre: items}, n releídas)."""
     previa = cache_json(LECTURA_CACHE) or {}
-    nueva, out, leidas = {}, {}, 0
+    if previa.get("_version") != LECTURA_VERSION:
+        previa = {}
+    nueva, out, leidas = {"_version": LECTURA_VERSION}, {}, 0
     for n, (nombre, pid, snap) in enumerate(fuentes, 1):
         clave = pid or "_liked"
         antes = previa.get(clave) or {}
@@ -350,7 +355,8 @@ def cargar(ignorar=(), solo_lectura=(), progreso=None):
             catalogo[x["id"]] = Pista(id=x["id"], titulo=x["nombre"], artistas=x["artistas"], album=x["album"],
                                       fecha_spotify=x["fecha"], isrc=x["isrc"], anadida=x["added_at"] or "",
                                       duracion=x["duracion"], popularidad=x["popularidad"],
-                                      explicita=x["explicita"], album_tipo=x["album_tipo"])
+                                      explicita=x["explicita"], album_tipo=x["album_tipo"],
+                                      disponible=x.get("disponible", True))
         listas[nombre] = Lista(nombre=nombre, origen="Spotify API", mtime=time.time(), pistas=[x["id"] for x in its],
                                autor=yo_id, solo_lectura=not pid or nombre in solo_lectura, spotify_id=pid or "",
                                anadidas={x["id"]: x["added_at"] or "" for x in reversed(its)})
@@ -422,8 +428,8 @@ def buscar_principal(pista):
         consultas.insert(0, f"isrc:{pista.isrc}")
     vistos, cands = set(), []
     for q in consultas:
-        for t in (call("GET", "/search", params={"q": q, "type": "track", "limit": 10}).get("tracks") or {}).get("items", []):
-            if not t or t.get("id") in vistos or t.get("id") == pista.id:
+        for t in _buscar(q):
+            if t["id"] in vistos or t["id"] == pista.id:
                 continue
             vistos.add(t["id"])
             otra = Pista(id=t["id"], titulo=t.get("name", ""), artistas=";".join(a.get("name", "") for a in t.get("artists", [])),
@@ -431,14 +437,69 @@ def buscar_principal(pista):
             dur = t.get("duration_ms") or 0
             if clave_cancion(otra) == clave_cancion(pista) and (not pista.duracion or abs(dur - pista.duracion) <= 4000):
                 alb = t.get("album") or {}
-                cands.append({"id": t["id"], "album": alb.get("name", ""), "fecha": alb.get("release_date", ""),
+                cands.append({"id": t["id"], "titulo": t.get("name", ""), "album": alb.get("name", ""), "fecha": alb.get("release_date", ""),
                               "popularidad": t.get("popularity"), "album_tipo": alb.get("album_type", "")})
     if not cands:
         return None
     mejor = max(cands, key=lambda c: (c["popularidad"] or -1, c["album_tipo"] == "album", c["album_tipo"] != "compilation"))
-    if mejor["popularidad"] is not None and pista.popularidad is not None and mejor["popularidad"] <= pista.popularidad:
+    if (pista.disponible and mejor["popularidad"] is not None and pista.popularidad is not None
+            and mejor["popularidad"] <= pista.popularidad):
         return None  # ninguna copia es más escuchada que la tuya
     return mejor
+
+
+def _buscar(q):
+    """Canciones de la búsqueda que suenan en tu país (1 lectura)."""
+    params = {"q": q, "type": "track", "limit": 10, "market": "from_token"}
+    try:
+        d = call("GET", "/search", params=params)
+    except RuntimeError as e:  # sesiones antiguas sin user-read-private: sin 'market' (no se sabe si suena)
+        if "scope" not in str(e):
+            raise
+        d = call("GET", "/search", params={k: v for k, v in params.items() if k != "market"})
+    its = (d.get("tracks") or {}).get("items", [])
+    return [t for t in its if t and t.get("id") and t.get("is_playable") is not False]
+
+
+def buscar_original(pista, mb=None, fecha_real=""):
+    """Versión original de estudio en Spotify de una canción que es un directo, remix, de recopilatorio o reedición.
+    'mb' = disco original según MusicBrainz (musicbrainz.original): si lo hay, se busca primero en ese disco.
+    Devuelve {id, album, fecha, popularidad, album_tipo} o None si no hay ninguna mejor que la tuya. Solo lecturas."""
+    from core.analisis import clave_cancion, motivos_version
+    from core.exportify import Pista
+    from core.musicbrainz import _clave, limpiar
+    artista, titulo = (pista.artistas or "").split(";")[0], limpiar(pista.titulo)
+    consultas = [f'track:"{titulo}" artist:"{artista}"']
+    if mb:
+        consultas.insert(0, f'track:"{titulo}" artist:"{artista}" album:"{mb["disco"]}"')
+    malas = {"directo", "version", "recopilatorio"}
+    tuya = {c for c, _ in motivos_version(pista, fecha_real)} - {"copia"}
+    anio_real = int((fecha_real or "0")[:4] or 0)
+    vistos, cands = {pista.id}, []
+    for q in consultas:
+        for t in _buscar(q):
+            if t["id"] in vistos:
+                continue
+            vistos.add(t["id"])
+            alb = t.get("album") or {}
+            otra = Pista(id=t["id"], titulo=t.get("name", ""), artistas=";".join(a.get("name", "") for a in t.get("artists", [])),
+                         album=alb.get("name", ""), fecha_spotify=alb.get("release_date", ""),
+                         album_tipo=alb.get("album_type", ""))
+            ms = {c for c, _ in motivos_version(otra, fecha_real)} - {"copia"}
+            if clave_cancion(otra) != clave_cancion(pista) or ms & malas:
+                continue
+            anio = int((otra.fecha_spotify or "0")[:4] or 0)
+            del_disco = bool(mb) and _clave(otra.album) == _clave(mb["disco"])
+            if anio_real and anio > anio_real + 1 and not del_disco:
+                continue  # posterior a la canción: regrabación o recopilatorio, no la original
+            puntos = (del_disco, "reedicion" not in ms,
+                      otra.album_tipo in ("album", "single"), -abs(anio - (anio_real or anio)), t.get("popularity") or -1)
+            cands.append((puntos, ms, {"id": t["id"], "titulo": otra.titulo, "album": otra.album, "fecha": otra.fecha_spotify,
+                                       "popularidad": t.get("popularity"), "album_tipo": otra.album_tipo}))
+    if not cands:
+        return None
+    _, ms, mejor = max(cands, key=lambda c: c[0])
+    return None if ms >= tuya else mejor  # no es mejor que la tuya (p. ej. también remasterizada)
 
 
 def reemplazar(playlist_id, viejo, nuevo, actual):

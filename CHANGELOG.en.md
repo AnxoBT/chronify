@@ -2,6 +2,18 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.1.0 — 2026-11-16
+
+- **Right version**: in Checks, live, remixed, compilation and reissued songs show the original album (from MusicBrainz,
+  free and without an account) and, if you read through the API, that version on Spotify, with buttons to listen to it
+  and swap it in all your playlists (same position and date). Without the API, a link to search for it on Spotify.
+  Songs already looked up aren't searched again.
+- **Songs no longer on Spotify** (greyed out): new warning in Checks (when reading through the API). If Spotify
+  replaced your copy with another that plays, yours is still recognised.
+- Song links open the **Spotify desktop app** if you have it installed.
+- "Same song twice" also detects titles with the alternative name in brackets
+  (e.g. *Bang A Gong (Get It On)* and *Get It On*).
+
 ## v1.0.1 — 2026-11-13
 
 - When you fix an artist's country in Statistics, the map and rankings update by themselves (without leaving the tab

@@ -35,7 +35,7 @@ const tarjeta = (titulo, sub, ...kids) => el("div", {className:"st"}, el("h2", {
 const ancho = n => (n.classList.add("ancho"), n);
 const leyenda = (series, colores) => el("div", {className:"leyenda"}, ...series.map((s, i) =>
   el("span", {}, el("i", {style:`background:${colores[i]}`}), s)));
-const pistaLi = (p, extra) => el("li", {}, el("a", {href:`https://open.spotify.com/track/${p.id}`, target:"_blank", rel:"noopener"}, p.t),
+const pistaLi = (p, extra) => el("li", {}, enlaceSpotify("track", p.id, p.t),
   el("span", {className:"muted"}, ` · ${p.anio || "?"}${extra ? " · " + extra(p) : ""}`));
 
 // barras verticales (una serie): datos [{x, n, tip}]

@@ -119,7 +119,7 @@ async function cargarStats(silencioso = false) {  // silencioso: se queda lo de 
   // curiosidades
   grid.append(ancho(tarjeta("Curiosidades", "",
     el("div", {className:"curios"}, ...s.curiosidades.slice(0, Math.floor(s.curiosidades.length / 4) * 4).map(c => el("div", {className:"curio"}, el("div", {className:"k"}, c.t),
-      el("div", {className:"v"}, c.id ? el("a", {href:`https://open.spotify.com/track/${c.id}`, target:"_blank", rel:"noopener"}, c.v) : c.v),
+      el("div", {className:"v"}, c.id ? enlaceSpotify("track", c.id, c.v) : c.v),
       c.d ? el("div", {className:"d"}, c.d) : ""))))));
   $("#stCuerpo").replaceChildren(...out);
 }
@@ -135,7 +135,7 @@ function tuAnio(s, anios) {
       {className: x === ANIO_ELEGIDO ? "pri mini" : "mini", onclick: () => { ANIO_ELEGIDO = x; pintar(); }}, x)));
     const heroe = (v, k) => el("div", {className:"hero"}, el("div", {className:"v"}, v), el("div", {className:"k"}, k));
     const cancion = (k, p, extra) => el("div", {className:"curio"}, el("div", {className:"k"}, k),
-      el("div", {className:"v"}, el("a", {href:`https://open.spotify.com/track/${p.id}`, target:"_blank", rel:"noopener"}, p.t)),
+      el("div", {className:"v"}, enlaceSpotify("track", p.id, p.t)),
       el("div", {className:"d"}, extra));
     const M = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     caja.replaceChildren(caja.firstChild, caja.children[1], chips,

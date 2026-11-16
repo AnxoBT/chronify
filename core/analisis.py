@@ -1,5 +1,6 @@
 """Comprobaciones entre listas y orden cronológico de cada una."""
 import bisect
+import dataclasses
 import re
 import unicodedata
 from collections import Counter
@@ -80,6 +81,18 @@ def duplicadas_por_copia(ids, cat):
             grupos.setdefault(("c",) + clave_cancion(p), set()).add(t)
         if p and p.isrc:
             grupos.setdefault(("i", p.isrc), set()).add(t)
+    # título alternativo entre paréntesis = título de otra canción tuya del mismo artista:
+    # 'Bang A Gong (Get It On)' y 'Get It On' (no basta con compartir el paréntesis: 'Solo Dolo (Nightmare)')
+    from core.musicbrainz import limpiar
+    for t in ids:
+        p = cat.get(t)
+        if not p:
+            continue
+        artista, titulo = clave_cancion(p)[0], limpiar(p.titulo or "")
+        for alt in re.findall(r"[(\[]([^)\]]*)[)\]]", titulo):
+            g = grupos.get(("c", artista, clave_cancion(dataclasses.replace(p, titulo=alt))[1]))
+            if g and t not in g and len(alt) >= 4:
+                g.add(t)
     vistos, out = set(), []
     for g in grupos.values():
         g = frozenset(g)
@@ -227,6 +240,11 @@ def comprobar(listas, cat, F=None, R=None):
     if out and out[-1]["tipo"] == "misma_cancion":
         for p in out[-1]["pistas"]:
             p["motivos"] = [f"disco: {cat[p['id']].album}" if p["id"] in cat else ""]
+
+    # canciones que Spotify ya no puede reproducir en tu país (solo se sabe leyendo por la API)
+    aviso("no_disponible", "error", "Ya no está disponible en Spotify (sale en gris): busca otra copia o quítala",
+          {t for l in listas.values() if not l.ajena for t in l.pistas
+           if cat.get(t) and not cat[t].disponible} - exc.get("no_disponible", set()))
 
     # versiones que quizá no son la original de estudio (directo, remix, recopilatorio, reedición)
     grupos, textos = {"directo": [], "version": [], "recopilatorio": [], "reedicion": [], "copia": []}, {}

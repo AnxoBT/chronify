@@ -68,7 +68,8 @@ const horaCupo = c => c && c.libera ? new Date(c.libera * 1000).toLocaleString(L
 const card = (t, v, cls = "") => el("div", {className:"box card"}, el("div", {className:"muted small"}, t), el("div", {className:"v " + cls}, String(v)));
 
 const EXC = {sin_genero:"sin_genero", sin_decada:"sin_decada", fuera_de_mix:"fuera_de_mix", falta_en_mix:"fuera_de_mix",
-  decada_distinta:"decada_distinta", version_dudosa:"version_dudosa", misma_cancion:"misma_cancion"};
+  decada_distinta:"decada_distinta", version_dudosa:"version_dudosa", misma_cancion:"misma_cancion",
+  no_disponible:"no_disponible"};
 const AVISOS_ABIERTOS = new Set();  // avisos largos desplegados (se conserva al repintar)
 function pintarAvisos() {
   if (!E.avisos.length) { $("#avisos").replaceChildren(el("div", {className:"box"}, el("span", {className:"tag ok"}, "Todo cuadra"))); return; }
@@ -81,26 +82,43 @@ function pintarAvisos() {
     el("ul", {}, ...ver.map(p => el("li", {}, `${p.t} · ${p.fecha || "?"} `,
       el("span", {className:"muted small"}, `(${p.fuente}${p.spotify && p.spotify !== p.fecha ? ", Spotify " + p.spotify : ""}) `),
       p.motivos && p.motivos.length ? el("span", {className:"aviso small"}, p.motivos.join(" · ") + " ") : "",
-      p.principal ? el("span", {className:"ok small"}, `→ buena: ${p.principal.album}${p.principal.popularidad != null ? ` (${p.principal.popularidad}/100)` : ""} `)
-        : p.principal === false ? el("span", {className:"muted small"}, "(no hay otra copia más escuchada) ") : "",
+      ...versionBuena(p),
       link(p.id), " ",
       EXC[a.tipo] ? el("button", {className:"mini", title:"No volver a avisar de esta canción", onclick: async () => {
         await api("/api/excepcion", {tipo:EXC[a.tipo], id:p.id}); toast("Añadida a excepciones en rules.json"); cargar(); }},
-        a.tipo === "version_dudosa" ? "es la buena" : a.tipo === "misma_cancion" ? "son distintas" : "excepción") : "",
+        a.tipo === "version_dudosa" ? "es la buena" : a.tipo === "misma_cancion" ? "son distintas" :
+        a.tipo === "no_disponible" ? "ignorar" : "excepción") : "",
       " ", el("button", {className:"mini", onclick: () => editarFecha(p)}, "fecha"),
       p.destino ? " " : "", p.destino ? botonMoverEpoca(p, a.lista) : "",
       ...(p.sugeridas || []).filter(s => s.lista).map(s => [" ", botonAnadir(p, s)]).flat()))),
     abierto ? "" : el("button", {className:"mini", style:"margin-top:6px", onclick: () => { AVISOS_ABIERTOS.add(clave); pintarAvisos(); }},
       `ver las ${a.pistas.length}`),
-    a.categoria === "copia" ? accionesCopias(a) : "");
+    a.tipo === "version_dudosa" || a.tipo === "no_disponible" ? accionesVersiones(a) : "");
   }));
 }
 
-// Copias poco escuchadas: buscar en Spotify la versión principal y cambiarla en todas tus listas
-function accionesCopias(a) {
-  const sinBuscar = a.pistas.filter(p => p.principal === undefined), conBuena = a.pistas.filter(p => p.principal);
-  if (E.fuente !== "Spotify (API)")
-    return el("div", {className:"muted small", style:"margin-top:8px"}, "Para buscar y cambiar las copias por la versión buena, pulsa 'Spotify (API)' en Resumen.");
+// Lo que se sabe de la versión buena de una canción: disco original (MusicBrainz) y la buena en Spotify
+function versionBuena(p) {
+  const o = p.original, b = p.principal, out = [];
+  if (o) out.push(el("span", {className:"small", title:"Según MusicBrainz"},
+    `original: «${o.disco}» (${o.fecha}${o.single ? `, single ${o.single}` : ""}) `));
+  else if (o === false) out.push(el("span", {className:"muted small"}, "(MusicBrainz no encuentra un disco de estudio anterior) "));
+  if (b) out.push(el("span", {className:"ok small"}, `→ en Spotify: ${b.album} (${b.fecha ? b.fecha.slice(0, 4) : "?"}) `),
+    enlaceSpotify("track", b.id, "escuchar la buena"), " · ");
+  else if (b === false) out.push(el("span", {className:"muted small"}, p.copia ? "(no hay otra copia en Spotify) " : "(no hay otra versión mejor en Spotify) "));
+  if (!b && p.buscar && (o || b === false || E.fuente !== "Spotify (API)"))
+    out.push(enlaceSpotify("search", p.buscar, "buscar en Spotify", {title:"Busca la canción en Spotify: elige la buena y cámbiala a mano"}), " · ");
+  return out;
+}
+
+// Versiones dudosas y canciones no disponibles: buscar la buena (MusicBrainz siempre; Spotify con la API) y cambiarla
+function accionesVersiones(a) {
+  const conApi = E.fuente === "Spotify (API)";
+  const sinBuscar = a.pistas.filter(p => conApi ? p.principal === undefined : !p.copia && p.original === undefined);
+  const conBuena = a.pistas.filter(p => p.principal);
+  if (!conApi && !sinBuscar.length)
+    return a.pistas.some(p => p.copia) ? el("div", {className:"muted small", style:"margin-top:8px"},
+      "Para buscar y cambiar las copias por la versión buena, pulsa 'Spotify (API)' en Resumen.") : "";
   return el("div", {className:"row", style:"margin-top:10px"},
     sinBuscar.length ? el("button", {className:"mini pri", onclick: async () => {
       try { await api("/api/spotify/buscar_copias", {ids:sinBuscar.map(p => p.id)}); toast("Buscando…"); pintarSpotify(); } catch (e) { toast(e.message); } }},
@@ -112,7 +130,9 @@ function accionesCopias(a) {
         `Son unos ${conBuena.length * 6} cambios en Spotify: se para al llegar al límite diario y sigues otro día con este mismo botón.`)) return;
       try { await api("/api/spotify/cambiar_copias", {ids:conBuena.map(p => p.id)}); toast("Cambiando…"); pintarSpotify(); } catch (e) { toast(e.message); } }},
       `Cambiar por la buena (${conBuena.length})`) : "",
-    el("span", {className:"muted small"}, "Cambiar gasta cupo de Spotify: unas 2 peticiones por lista en la que esté cada canción."));
+    el("span", {className:"muted small"}, conApi
+      ? "Buscar mira el disco original en MusicBrainz (gratis) y esa versión en Spotify (1 lectura por canción). Cambiar gasta cupo de Spotify: unas 2 peticiones por lista en la que esté cada canción."
+      : "Busca el disco original en MusicBrainz (gratis, 1 canción por segundo). Para cambiarla desde aquí, lee tus listas con 'Spotify (API)'; si no, usa «buscar en Spotify» y cámbiala a mano."));
 }
 
 // Añade la canción a la lista propuesta (género por sus artistas / época por su fecha), en su sitio cronológico
@@ -295,10 +315,10 @@ async function pintarSpotify() {
     ? el("button", {className:"pri", disabled:s.activo, onclick:spTarea("/api/spotify/leer")}, "Spotify (API)")
     : el("span", {className:"muted small"}, "Spotify: sin conectar (Ajustes)"),
     s.activo ? el("span", {className:"tag info", style:"margin-left:8px"}, s.tarea + "…") : "",
-    s.activo && s.tarea === "aplicar" ? el("button", {className:"mini", style:"margin-left:8px", onclick:spTarea("/api/spotify/cancelar")}, "Cancelar") : "");
+    s.activo && (s.tarea === "aplicar" || s.tarea === "buscar_copias") ? el("button", {className:"mini", style:"margin-left:8px", onclick:spTarea("/api/spotify/cancelar")}, "Cancelar") : "");
   const logSp = () => [
     s.activo ? el("span", {className:"tag info"}, (s.tarea === "aplicar" ? "Ordenando en Spotify" : s.tarea) + "…") : "",
-    s.activo && s.tarea === "aplicar" ? el("button", {className:"mini", style:"margin-left:8px", onclick:spTarea("/api/spotify/cancelar")}, "Cancelar") : "",
+    s.activo && (s.tarea === "aplicar" || s.tarea === "buscar_copias") ? el("button", {className:"mini", style:"margin-left:8px", onclick:spTarea("/api/spotify/cancelar")}, "Cancelar") : "",
     s.error ? el("div", {className:"error small", style:"margin-top:8px"}, "Spotify: " + s.error) : "",
     s.log.length ? el("pre", {className:"muted small", style:"white-space:pre-wrap;margin:8px 0 0"}, s.log.join("\n")) : ""];
   $("#spLog").replaceChildren(...logSp().slice(2));
