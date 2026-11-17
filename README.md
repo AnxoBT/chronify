@@ -43,6 +43,18 @@
 
 > The interface is in English and Spanish: it follows your system language and can be changed in Settings.
 
+<p align="center">
+  <img src="docs/screenshots/en_summary.png" width="32%" alt="Summary">
+  <img src="docs/screenshots/en_sort.png" width="32%" alt="Sort">
+  <img src="docs/screenshots/en_stats.png" width="32%" alt="Statistics">
+</p>
+
+<details>
+<summary><b>Statistics tour (GIF)</b></summary>
+<br>
+<p align="center"><img src="docs/screenshots/en_stats_scroll.gif" width="80%" alt="Scrolling through the statistics"></p>
+</details>
+
 ### Features
 
 - **Sort by real date** any playlist: copy-paste a list into Spotify desktop, or (Premium) apply it through
@@ -203,6 +215,18 @@ released under the same licence, with its source code.
     </td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/screenshots/es_summary.png" width="32%" alt="Resumen">
+  <img src="docs/screenshots/es_sort.png" width="32%" alt="Ordenar">
+  <img src="docs/screenshots/es_stats.png" width="32%" alt="Estadísticas">
+</p>
+
+<details>
+<summary><b>Recorrido por las estadísticas (GIF)</b></summary>
+<br>
+<p align="center"><img src="docs/screenshots/es_stats_scroll.gif" width="80%" alt="Recorrido por las estadísticas"></p>
+</details>
 
 ### Funciones
 
