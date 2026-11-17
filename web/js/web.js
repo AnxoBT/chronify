@@ -6,7 +6,7 @@
   const BASE = new URL(".", location.href);  // p. ej. https://usuario.github.io/chronify/
   const URL_APP = BASE.href;                  // redirect de Spotify: vuelve aquí con ?code=…
   const DINAMICO = /^\/(api\/|spotify\/login|callback)/;
-  const ESTADOS = ["/api/spotify", "/api/mb", "/api/artistas"];
+  const ESTADOS = ["/api/spotify", "/api/mb", "/api/artistas", "/api/discos"];
 
   // memoria compartida (solo si el service worker ha aislado la página): cancelar y esperas sin gastar batería
   const compartida = self.crossOriginIsolated ? new SharedArrayBuffer(8) : null;

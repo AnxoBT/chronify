@@ -1,5 +1,14 @@
 # Cambios
 
+## v1.2.0 — 2026-11-17
+
+- **Tus discos** en Estadísticas: los discos de los que más canciones tienes, los que tienes más completos (y los
+  completos), los más largos y más cortos (por duración y por número de canciones), discos por década, artistas con más
+  discos y curiosidades (discos de los que solo tienes una canción, el más antiguo y el más reciente, cuántas de tus
+  canciones son de singles o EP). El total de canciones y la duración de cada disco salen de MusicBrainz (gratis, sin
+  cuenta) con el botón **Buscar discos en MusicBrainz**: tarda unos 2 segundos por disco, puedes pararlo cuando quieras
+  y lo encontrado se ve al momento. Lo ya buscado no se vuelve a buscar.
+
 ## v1.1.1 — 2026-11-17
 
 - La lista "Canciones que te gustan · por fecha" se renombra en Spotify al cambiar el idioma de la app, y las listas

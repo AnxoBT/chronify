@@ -9,6 +9,7 @@ async function cargarStats(silencioso = false) {  // silencioso: se queda lo de 
   sel.replaceChildren(...ST.listas.map(x => el("option", {value:x.nombre, selected:x.nombre === ST.lista},
     `${x.favoritas ? "♥ Canciones que te gustan" : x.nombre} (${fmt(x.n)})`)));
   vigilarArtistas();
+  vigilarDiscos();
   const s = ST, r = s.resumen, out = [];
   // cifras grandes
   const heroe = (v, k) => el("div", {className:"hero"}, el("div", {className:"v"}, v), el("div", {className:"k"}, k));
@@ -97,6 +98,8 @@ async function cargarStats(silencioso = false) {  // silencioso: se queda lo de 
     el("div", {className:"cols2", style:"margin-top:10px"},
       el("div", {}, el("div", {className:"sub"}, "Las más largas"), el("ul", {className:"lista-mini"}, ...s.duracion.largas.map(p => pistaLi(p, p => mmss(p.v))))),
       el("div", {}, el("div", {className:"sub"}, "Las más cortas"), el("ul", {className:"lista-mini"}, ...s.duracion.cortas.map(p => pistaLi(p, p => mmss(p.v))))))));
+  // discos
+  if (s.discos) grid.append(...tarjetasDiscos(s.discos));
   // cuándo añades música
   if (s.anadidas) {
     const ad = s.anadidas, cadaM = MOVIL() ? (ad.meses.length > 36 ? 12 : 6) : ad.meses.length > 36 ? 6 : 3;
@@ -218,3 +221,70 @@ async function vigilarArtistas() {
   else if (ART_ACTIVO) { ART_ACTIVO = false; if ($("#stats").classList.contains("on")) cargarStats(); }
 }
 let ART_ACTIVO = false;
+
+// Discos: canciones que tienes de cada disco; total de canciones y duración del disco entero, de MusicBrainz
+function tarjetasDiscos(d) {
+  const r = d.resumen, sinDatos = !r.con_total;
+  const heroe = (v, k) => el("div", {className:"hero"}, el("div", {className:"v"}, v), el("div", {className:"k"}, k));
+  const disco = x => enlaceSpotify("search", `${x.artista === "Varios artistas" ? "" : x.artista + " "}${x.disco}`, x.disco);
+  const li = (x, extra) => el("li", {}, disco(x), el("span", {className:"muted"}, ` · ${x.artista} · ${x.anio || "?"} · ${extra(x)}`));
+  const lista = (xs, extra, vacio = "Sin datos todavía") => xs.length ? el("ul", {className:"lista-mini"}, ...xs.map(x => li(x, extra)))
+    : el("div", {className:"muted small"}, vacio);
+  const aviso = "Pulsa «Buscar discos en MusicBrainz» arriba para saber cuántas canciones tiene cada disco y cuánto dura.";
+  const minutos = ms => `${Math.round(ms / 60000)} min`;
+  const tips = x => [el("b", {}, `${x.artista} - ${x.disco}`), el("div", {className:"muted"}, x.titulos.join(" · ") + (x.n > x.titulos.length ? " …" : ""))];
+  const out = [];
+  out.push(ancho(tarjeta("Tus discos", `Canciones de la lista agrupadas por disco y artista (los singles y EP, aparte). El total de canciones y la duración de cada disco salen de MusicBrainz: ${fmt(r.con_total)} de ${fmt(r.discos)} discos con dato.`,
+    el("div", {className:"heroes", style:"grid-template-columns:repeat(4,minmax(0,1fr))"},
+      heroe(fmt(r.discos), "discos distintos"), heroe(r.media != null ? fmt(r.media) : "–", "canciones por disco de media"),
+      heroe(fmt(r.completos), "discos completos"), heroe(r.edad_media != null ? `${r.edad_media} años` : "–", "edad media de tus discos")),
+    sinDatos ? el("div", {className:"muted small"}, aviso) : "")));
+  out.push(tarjeta("Discos de los que más canciones tienes", "Sin contar singles ni EP",
+    hbar(d.mas_canciones.map(x => ({nombre:x.disco, n:x.n, total:x.total, extra:x.artista, tip:tips(x)})),
+      {valor: x => x.total ? `${x.n}/${x.total}` : fmt(x.n)})));
+  out.push(tarjeta("Discos que tienes más completos", "Qué parte de cada disco tienes en la lista (discos de 5 canciones o más con dato de MusicBrainz, de los que tienes al menos 2)",
+    d.mas_completos.length ? hbar(d.mas_completos.map(x => ({nombre:x.disco, n:x.pct, extra:x.artista, tip:tips(x)})),
+      {color:"var(--s1)", valor: x => `${x.n} %`}) : el("div", {className:"muted small"}, aviso),
+    el("div", {className:"sub", style:"margin-top:14px"}, `Discos completos (${fmt(r.completos)})`),
+    lista(d.completos, x => `${x.total} canciones`, sinDatos ? "Sin datos todavía" : "Ninguno todavía")));
+  out.push(tarjeta("Los discos más largos y más cortos", "Duración del disco entero (álbumes según MusicBrainz: sin singles, EP ni recopilatorios de varios artistas)",
+    el("div", {className:"cols2"},
+      el("div", {}, el("div", {className:"sub"}, "Los más largos"), lista(d.largos, x => minutos(x.ms))),
+      el("div", {}, el("div", {className:"sub"}, "Los más cortos"), lista(d.cortos, x => minutos(x.ms))))));
+  out.push(tarjeta("Discos con más y menos canciones", "Canciones del disco entero (álbumes según MusicBrainz)",
+    el("div", {className:"cols2"},
+      el("div", {}, el("div", {className:"sub"}, "Con más canciones"), lista(d.mas_pistas, x => `${x.total} canciones`)),
+      el("div", {}, el("div", {className:"sub"}, "Con menos canciones"), lista(d.menos_pistas, x => `${x.total} canciones`)))));
+  out.push(tarjeta("Tus discos por década", "Discos distintos según el año en que salió el disco",
+    barrasV(d.por_decada.map(x => ({x:x.decada.slice(2), n:x.n, tip:[el("b", {}, x.decada), `${fmt(x.n)} discos`]})), {alto:190, W:440})));
+  out.push(tarjeta("Artistas con más discos", "De cuántos discos distintos tienes canciones",
+    d.artistas.length ? hbar(d.artistas.map(a => ({nombre:a.nombre, n:a.n, tip:[el("b", {}, a.nombre), el("div", {className:"muted"}, a.discos.join(" · "))]})), {color:"var(--s2)"})
+      : el("div", {className:"muted small"}, "Ningún artista con más de un disco")));
+  const cur = d.curiosidades.slice(0, Math.floor(d.curiosidades.length / 4) * 4);
+  if (cur.length) out.push(ancho(tarjeta("Curiosidades de tus discos", "",
+    el("div", {className:"curios"}, ...cur.map(c => el("div", {className:"curio"}, el("div", {className:"k"}, c.t),
+      el("div", {className:"v"}, c.buscar ? enlaceSpotify("search", c.buscar, c.v) : c.v), c.d ? el("div", {className:"d"}, c.d) : ""))))));
+  return out;
+}
+
+async function vigilarDiscos() {
+  clearTimeout(DISC_TIMER);  // una sola consulta en marcha aunque se llame otra vez al recalcular la página
+  const lista = $("#stLista").value || "";
+  let a;
+  try { a = await api("/api/discos?lista=" + encodeURIComponent(lista)); } catch (e) { return; }
+  const min = n => Math.max(1, Math.ceil(n * 2.2 / 60));  // 2 peticiones por disco, 1 por segundo
+  $("#stDisc").replaceChildren(a.activo
+    ? el("span", {}, el("span", {className:"tag info"}, `Buscando discos en MusicBrainz ${a.hechos}/${a.total}`),
+        el("span", {className:"muted"}, ` ~${min(a.total - a.hechos)} min · ${a.actual} `),
+        el("button", {className:"mini", onclick: () => api("/api/discos", {cancelar:true})}, "parar"))
+    : a.pendientes ? el("span", {}, el("span", {className:"muted"}, `${fmt(a.pendientes)} discos sin buscar `),
+        el("button", {className:"mini pri", onclick: async () => { try { await api("/api/discos", {lista}); vigilarDiscos(); } catch (e) { toast(e.message); } }},
+          `Buscar discos en MusicBrainz (~${min(a.pendientes)} min)`))
+    : el("span", {className:"muted"}, "Discos buscados en MusicBrainz"),
+    a.error ? el("span", {className:"error"}, " Error: " + a.error) : "");
+  if (a.activo) { DISC_ACTIVO = true; DISC_VUELTAS = (DISC_VUELTAS + 1) % 10; DISC_TIMER = setTimeout(vigilarDiscos, 3000);
+    // cada ~30 s se recalcula la página con lo que ya se ha encontrado (sin perder la posición)
+    if (!DISC_VUELTAS) refrescarStatsLuego(); }
+  else if (DISC_ACTIVO) { DISC_ACTIVO = false; refrescarStatsLuego(); }
+}
+let DISC_ACTIVO = false, DISC_VUELTAS = 0, DISC_TIMER = null;

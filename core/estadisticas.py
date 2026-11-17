@@ -2,7 +2,8 @@
 
 Todo se calcula en local con lo que ya hay: fechas reales (fechas.json), metadatos de Exportify/Spotify
 (géneros, duración, popularidad, características de audio, fecha de añadido) y los datos de artistas de
-MusicBrainz (core/artistas.py: país, persona/grupo, género, fecha de nacimiento).
+MusicBrainz (core/artistas.py: país, persona/grupo, género, fecha de nacimiento; core/discos.py: canciones y
+duración de cada disco).
 """
 import re
 from collections import Counter, defaultdict
@@ -10,6 +11,7 @@ from datetime import datetime
 from statistics import mean, median
 
 from core import artistas as A
+from core import discos, musicbrainz
 from core.config import cache_json, norm
 from core.exportify import buscar
 from core.fechas import Fechas
@@ -39,13 +41,18 @@ def _decada(a):
     return f"{a // 10 * 10}s"
 
 
+def elegir_lista(listas, R, lista=None):
+    """(nombre pedido, Lista o None): la pedida; por defecto Mix y, si no hay (otro usuario sin configurar), la lista
+    propia más grande."""
+    mayor = max((x for x in listas.values() if not x.ajena and not x.solo_lectura), key=lambda x: len(set(x.pistas)), default=None)
+    nombre = lista or (R or {}).get("mix") or (mayor.nombre if mayor else "")
+    return nombre, buscar(listas, nombre)
+
+
 def calcular(listas, cat, F=None, R=None, lista=None):
     F = F or Fechas()
     R = R or {}
-    # por defecto Mix; si no hay (otro usuario sin configurar), la lista propia más grande
-    mayor = max((x for x in listas.values() if not x.ajena and not x.solo_lectura), key=lambda x: len(set(x.pistas)), default=None)
-    nombre = lista or R.get("mix") or (mayor.nombre if mayor else "")
-    l = buscar(listas, nombre)
+    nombre, l = elegir_lista(listas, R, lista)
     if not l:
         return {"error": f"No encuentro la lista {nombre}"}
     ids = [t for t in dict.fromkeys(l.pistas) if t in cat]
@@ -350,6 +357,9 @@ def calcular(listas, cat, F=None, R=None, lista=None):
             "pct_nicho": round(100 * sum(1 for v in con_oy.values() if v < 1000) / len(con_oy)),
             "generos": [{"nombre": g, "n": n, "ej": gen_ej[g]} for g, n in sorted(gen_n.items(), key=lambda kv: (kv[1], kv[0]))[:10]],
         }
+
+    # ── discos (agrupados por disco + artista; total de canciones y duración, de MusicBrainz si ya se buscaron) ──
+    out["discos"] = discos.calcular(P, cache_json(musicbrainz.CACHE))
 
     out["anios"] = tu_anio(P, anio, anadida, canciones_de, info, principal, listas, R, F)
     return out

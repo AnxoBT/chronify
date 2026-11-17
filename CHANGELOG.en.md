@@ -2,6 +2,15 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.2.0 — 2026-11-17
+
+- **Your albums** in Statistics: the albums you have the most songs from, the ones you have most of (and the complete
+  ones), the longest and shortest albums (by length and by number of songs), albums by decade, artists with the most
+  albums and fun facts (albums you have only one song from, the oldest and newest album, how many of your songs come
+  from singles or EPs). Each album's total songs and length come from MusicBrainz (free, no account) with the **Search
+  MusicBrainz for albums** button: it takes about 2 seconds per album, you can stop it any time and what's found shows
+  up right away. Albums already looked up aren't searched again.
+
 ## v1.1.1 — 2026-11-17
 
 - The "Liked Songs · by date" playlist is renamed on Spotify when you change the app's language, and the playlists

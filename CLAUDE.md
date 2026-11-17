@@ -126,6 +126,14 @@ Spotify es por copia de la canción y no vale (una reedición de un éxito sale 
 parejas y curiosidades en filas completas de 4 (el usuario quiere todo simétrico, sin huecos). **Tu año** (`tu_anio`): por año de añadido (listas de idioma): canciones, artistas/países nuevos (primera vez que
 aparecen), mes a mes, décadas, géneros, primera/última. **Fotos mensuales** de Mix en `cache/fotos/AAAA-MM.json`
 (se guardan al abrir Estadísticas de Mix; tabla de evolución desde el 2.º mes). La API ya no da géneros ni audio: al leer por API se completan con el último zip de Exportify.
+**Discos** (`core/discos.py`, `out["discos"]`): Exportify no trae id ni total de canciones del disco → se agrupa por nombre
+del disco + primer artista (sin tildes/mayúsculas/signos); mismo nombre y fecha con ≥3 artistas = recopilatorio de varios
+artistas (uno solo, no se busca). Total de canciones, duración, tipo y año salen de MusicBrainz con el botón "Buscar discos
+en MusicBrainz" (`/api/discos`, estado `DISC`, 2 peticiones por disco: búsqueda de `release` + `release/{id}?inc=recordings`;
+edición normal = nº de canciones más repetido; "(Deluxe…)" = la de ese nombre o la más larga; sin DVD/vídeo) →
+`cache/musicbrainz.json` con clave `disco1|artista|disco` ("" = no encontrado), así viaja en `conocimiento/` y en la
+sincronización. Sin MusicBrainz, un disco que se llama como una de tus 1–2 canciones cuenta como single. Porcentajes,
+completos, más largos/cortos solo con total conocido (rankings de duración/canciones: solo `Album`, sin singles/EP/varios).
 
 ## Comandos
 
@@ -147,6 +155,7 @@ core/musicbrainz.py    búsqueda de fecha original (ISRC + título + singles)
 core/spotify.py        Web API: login PKCE, leer listas, mover canciones, cupo diario
 core/artistas.py       país/tipo/género/nacimiento de artistas (MusicBrainz + artistas.json manual)
 core/estadisticas.py   pestaña Estadísticas (todo local, sin red)
+core/discos.py         discos de Estadísticas: agrupar, totales de MusicBrainz (caché) y rankings
 core/historial.py      historial de cambios en cache/historial.jsonl (deshacer fechas y países)
 web/mundo.json         mapa del mundo ya proyectado (tools/generar_mapa.py, Natural Earth, dominio público)
 web/server.py          servidor stdlib, API JSON (/api/estado, /api/txt, /api/fechas, /api/fecha, /api/mb, …)

@@ -24,7 +24,7 @@ TAREAS = []
 _ENVIAR = [None]  # función JS que manda a la página las fotos de estado
 _COMPARTIDA = [None]  # Int32Array sobre SharedArrayBuffer: [0] = la página pide cancelar, [1] = para esperar
 _ULTIMA_FOTO = [0.0]
-ESTADOS = {"/api/spotify": "SP", "/api/mb": "MB", "/api/artistas": "ART"}  # ruta → estado de la tarea en web/server.py
+ESTADOS = {"/api/spotify": "SP", "/api/mb": "MB", "/api/artistas": "ART", "/api/discos": "DISC"}  # ruta → estado de la tarea en web/server.py
 _dormir_real = time.sleep
 
 
@@ -63,7 +63,7 @@ def _foto(forzar=False):
         from js import Atomics
         Atomics.store(_COMPARTIDA[0], 0, 0)
         from web import server
-        for d in (server.SP, server.MB, server.ART):
+        for d in (server.SP, server.MB, server.ART, server.DISC):
             if d.get("activo"):
                 d["cancelar"] = True
     if not _ENVIAR[0] or (not forzar and time.time() - _ULTIMA_FOTO[0] < 1.0):

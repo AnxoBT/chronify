@@ -1086,3 +1086,105 @@ class TestHistorial(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDiscos(unittest.TestCase):
+    """Estadísticas de discos: agrupar por disco + artista, totales de MusicBrainz (simulado, sin red)."""
+
+    def _cat(self):
+        def p(t, titulo, artistas, album, fecha="1977-02-04", ms=200000):
+            return t, Pista(id=t, titulo=titulo, artistas=artistas, album=album, fecha_spotify=fecha, duracion=ms)
+        return dict([
+            p("r1", "Dreams", "Fleetwood Mac", "Rumours"), p("r2", "Go Your Own Way", "Fleetwood Mac", "Rumours"),
+            p("r3", "The Chain", "fleetwood mac", "RUMOURS"),  # misma clave (mayúsculas)
+            p("t1", "Tusk", "Fleetwood Mac", "Tusk", "1979"),  # se llama como la canción: parece single
+            p("x1", "Bohemian Rhapsody", "Queen", "A Night at the Opera", "1975"),
+            p("x2", "Love of My Life", "Queen", "A Night at the Opera", "1975"),
+            p("b1", "Uno", "Artista A", "Banda Sonora", "2001-05-01"), p("b2", "Dos", "Artista B", "Banda Sonora", "2001-05-01"),
+            p("b3", "Tres", "Artista C;Artista A", "Banda Sonora", "2001-05-01"),
+            p("s1", "Sin disco", "Nadie", ""),
+        ])
+
+    def test_agrupar(self):
+        from core import discos
+        g = discos.agrupar(self._cat())
+        por = {(v["artista"], discos._k(v["disco"])): sorted(v["ids"]) for v in g.values()}
+        self.assertEqual(por[("Fleetwood Mac", "rumours")], ["r1", "r2", "r3"])
+        self.assertEqual(por[(discos.VARIOS, "bandasonora")], ["b1", "b2", "b3"])
+        self.assertNotIn("s1", [t for v in g.values() for t in v["ids"]])
+        self.assertEqual(discos.limpiar("Rumours (Super Deluxe)"), "Rumours")
+        self.assertEqual(discos.limpiar("Abbey Road - Remastered 2009"), "Abbey Road")
+        self.assertEqual(discos.limpiar("Sweat (A La La La La Long)"), "Sweat (A La La La La Long)")
+
+    def test_calcular_con_totales(self):
+        from core import discos
+        cache = {discos.clave_cache("Fleetwood Mac", "Rumours"): {"tipo": "Album", "pistas": 3, "ms": 2340000, "fecha": "1977-02-04"},
+                 discos.clave_cache("Queen", "A Night at the Opera"): {"tipo": "Album", "pistas": 12, "ms": 2580000, "fecha": "1975-11-21"},
+                 discos.clave_cache("Fleetwood Mac", "Tusk"): ""}  # buscado y no encontrado
+        s = discos.calcular(self._cat(), cache, hoy=2026)
+        r = s["resumen"]
+        self.assertEqual((r["discos"], r["singles"], r["completos"], r["con_total"]), (3, 1, 0, 2))  # Rumours (3) < 5 canciones
+        self.assertEqual([d["disco"] for d in s["mas_canciones"]], ["Rumours", "Banda Sonora", "A Night at the Opera"])  # empate: más completo antes
+        self.assertEqual([d["disco"] for d in s["largos"]], ["A Night at the Opera", "Rumours"])  # sin singles ni varios
+        self.assertEqual(s["mas_pistas"][0]["total"], 12)
+        self.assertEqual([d["pct"] for d in s["mas_completos"]], [17])  # 2 de 12; Rumours no llega a 5 canciones
+        self.assertEqual(s["por_decada"], [{"decada": "1970s", "n": 2}, {"decada": "2000s", "n": 1}])
+        self.assertEqual(s["artistas"], [])  # Tusk es single: Fleetwood Mac solo tiene un disco
+        self.assertEqual(len(s["curiosidades"]), 4)
+        # sin nada buscado no se rompe y no hay porcentajes
+        s = discos.calcular(self._cat(), {}, hoy=2026)
+        self.assertEqual((s["resumen"]["con_total"], s["mas_completos"], s["largos"]), (0, [], []))
+
+    def test_completo(self):
+        from core import discos
+        cat = {f"q{i}": Pista(id=f"q{i}", titulo=f"T{i}", artistas="Queen", album="Disco", fecha_spotify="1980") for i in range(6)}
+        s = discos.calcular(cat, {discos.clave_cache("Queen", "Disco"): {"tipo": "Album", "pistas": 6, "ms": 1}}, hoy=2026)
+        self.assertEqual((s["resumen"]["completos"], s["completos"][0]["pct"]), (1, 100))
+
+    def test_pendientes(self):
+        from core import discos
+        cat = self._cat()
+        cache = {discos.clave_cache("Queen", "A Night at the Opera"): ""}
+        # primero los que más canciones tienes; los que parecen single, al final; varios artistas nunca
+        self.assertEqual(discos.pendientes(cat, cache), [("Fleetwood Mac", "Rumours"), ("Fleetwood Mac", "Tusk")])
+
+    def test_buscar_musicbrainz(self):
+        from unittest import mock
+        from core import discos, musicbrainz
+        rg = {"id": "rg1", "title": "Rumours", "primary-type": "Album"}
+        cred = [{"name": "Fleetwood Mac"}]
+        rel = lambda i, n, fecha, titulo="Rumours", score=100, **k: {"id": i, "score": score, "title": titulo, "status": "Official",
+                                                                    "date": fecha, "track-count": n, "artist-credit": cred,
+                                                                    "release-group": k.get("grupo", rg)}
+        busqueda = {"releases": [rel("a", 11, "1977-02-04"), rel("b", 11, "1977"), rel("c", 38, "2013", "Rumours (Super Deluxe)"),
+                                 rel("d", 11, "1975", grupo={"id": "otro", "primary-type": "Single"}),
+                                 rel("e", 10, "1970", "Rumours", score=50)]}
+        disco = {"media": [{"tracks": [{"length": 200000}] * 11}]}
+        llamadas, guardado = [], {}
+
+        def get(url):
+            llamadas.append(url)
+            return disco if "/release/" in url else busqueda
+        with mock.patch.object(musicbrainz, "_get", get), \
+             mock.patch.object(discos, "cache_json", lambda n, d=None: guardado.get(n, {})), \
+             mock.patch.object(discos, "save_cache", lambda n, d: guardado.__setitem__(n, d)):
+            r = discos.buscar("Fleetwood Mac", "Rumours")
+            self.assertEqual((r["pistas"], r["ms"], r["tipo"], r["fecha"]), (11, 2200000, "Album", "1977"))
+            self.assertRegex(llamadas[-1], r"/release/[ab]\?")  # una edición normal (11), no la deluxe ni el single
+            n = len(llamadas)
+            self.assertEqual(discos.buscar("Fleetwood Mac", "Rumours"), r)  # de la caché, sin peticiones
+            self.assertEqual(len(llamadas), n)
+            discos.buscar("Fleetwood Mac", "Rumours (Super Deluxe)")  # edición especial: la de ese nombre
+            self.assertIn("/release/c?", llamadas[-1])
+            self.assertEqual(discos.buscar("Fleetwood Mac", "Otro disco"), "")  # no encontrado: también se guarda
+            self.assertIn(discos.clave_cache("Fleetwood Mac", "Otro disco"), guardado[musicbrainz.CACHE])
+
+    def test_en_estadisticas(self):
+        from unittest import mock
+        from core import estadisticas
+        cat = self._cat()
+        L = listas(Mix=list(cat))
+        with mock.patch.object(estadisticas, "cache_json", return_value={}), \
+             mock.patch.object(estadisticas.A, "manuales", return_value={}):
+            s = estadisticas.calcular(L, cat, Fechas({"pistas": {}}), {"mix": "Mix"})
+        self.assertEqual(s["discos"]["resumen"]["discos"], 3)

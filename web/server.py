@@ -42,6 +42,7 @@ SRV = [None]
 MB = {"activo": False, "hechos": 0, "total": 0, "actual": "", "propuestas": [], "error": None, "cancelar": False}
 SINC = {"activo": False, "error": None, "paso": ""}  # sincronización PC ↔ móvil por USB (core/sincro.py)
 ART = {"activo": False, "hechos": 0, "total": 0, "actual": "", "error": None, "cancelar": False}  # países de artistas
+DISC = {"activo": False, "hechos": 0, "total": 0, "actual": "", "error": None, "cancelar": False, "lista": ""}  # discos
 PENDIENTE = "spotify_pendiente.json"  # listas que se quedaron a medias de ordenar (cupo, bloqueo, cancelar)
 
 
@@ -632,6 +633,38 @@ def _buscar_artistas():
         ART["activo"] = False
 
 
+def _canciones_lista(nombre=None):
+    """{id: Pista} de la lista de Estadísticas (la pedida o la de por defecto)."""
+    from core import estadisticas
+    if not ESTADO["cargado"]:
+        recargar()
+    _, l = estadisticas.elegir_lista(ESTADO["listas"], config.rules(), nombre or None)
+    return {t: ESTADO["cat"][t] for t in dict.fromkeys(l.pistas if l else []) if t in ESTADO["cat"]}
+
+
+def _buscar_discos():
+    """Total de canciones y duración de cada disco de la lista en MusicBrainz (los que no estén ya en caché)."""
+    from core import discos
+    try:
+        fallos = 0
+        for artista, disco in discos.pendientes(_canciones_lista(DISC["lista"]))[:DISC["total"]]:
+            if DISC["cancelar"]:
+                break
+            DISC["actual"] = f"{artista} - {disco}"
+            try:
+                discos.buscar(artista, disco)
+                fallos = 0
+            except Exception as e:  # un disco que falla no para la tanda; muchos seguidos = MusicBrainz caído
+                fallos += 1
+                if fallos >= 5:
+                    raise RuntimeError(f"MusicBrainz no responde ({e}); vuelve a intentarlo en un rato")
+            DISC["hechos"] += 1
+    except Exception as e:
+        DISC["error"] = str(e)
+    finally:
+        DISC["activo"] = False
+
+
 def deshacer(uid):
     e = historial.buscar(uid)
     if not e or e.get("deshecha") or e["tipo"] not in ("fecha", "artista"):
@@ -765,6 +798,9 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/artistas":
             from core import artistas
             return self._send(200, {**ART, "pendientes": len(artistas.pendientes(_nombres_artistas()))})
+        if u.path == "/api/discos":  # ?lista= → búsqueda de discos en MusicBrainz: progreso y cuántos faltan
+            from core import discos
+            return self._send(200, {**DISC, "pendientes": len(discos.pendientes(_canciones_lista(q.get("lista") or DISC["lista"])))})
         if u.path == "/api/historial":
             return self._send(200, historial.leer())
         if u.path == "/api/spotify":
@@ -875,12 +911,24 @@ class H(BaseHTTPRequestHandler):
             if b.get("cancelar"):
                 ART["cancelar"] = True
                 return self._send(200, {"ok": True})
-            if ART["activo"] or MB["activo"]:
+            if ART["activo"] or MB["activo"] or DISC["activo"]:
                 return self._send(409, {"error": "ya hay una búsqueda en MusicBrainz en marcha"})
             from core import artistas
             ART.update(activo=True, hechos=0, total=len(artistas.pendientes(_nombres_artistas())), actual="",
                        error=None, cancelar=False)
             threading.Thread(target=_buscar_artistas, daemon=True).start()
+            return self._send(200, {"ok": True})
+        if u.path == "/api/discos":  # {lista} busca en MusicBrainz los discos de esa lista, {cancelar:true} para
+            if b.get("cancelar"):
+                DISC["cancelar"] = True
+                return self._send(200, {"ok": True})
+            if ART["activo"] or MB["activo"] or DISC["activo"]:
+                return self._send(409, {"error": "ya hay una búsqueda en MusicBrainz en marcha"})
+            from core import discos
+            lista = str(b.get("lista") or "")
+            DISC.update(activo=True, hechos=0, total=len(discos.pendientes(_canciones_lista(lista))), actual="",
+                        error=None, cancelar=False, lista=lista)
+            threading.Thread(target=_buscar_discos, daemon=True).start()
             return self._send(200, {"ok": True})
         if u.path == "/api/artista":  # {nombre, pais}: corrección manual (artistas.json)
             from core import artistas
@@ -896,7 +944,7 @@ class H(BaseHTTPRequestHandler):
             if b.get("cancelar"):
                 MB["cancelar"] = True
                 return self._send(200, {"ok": True})
-            if MB["activo"] or ART["activo"]:
+            if MB["activo"] or ART["activo"] or DISC["activo"]:
                 return self._send(409, {"error": "ya hay una búsqueda en marcha"})
             ids = b.get("ids", [])
             MB.update(activo=True, hechos=0, total=len(ids), actual="", propuestas=[], error=None, cancelar=False)
@@ -975,7 +1023,7 @@ class H(BaseHTTPRequestHandler):
                 actualizar._CACHE.update(t=0, info=None)
             return self._send(200, {"ok": True})
         if u.path == "/api/actualizacion/aplicar":
-            if UPD["activo"] or SP["activo"] or MB["activo"] or ART["activo"]:
+            if UPD["activo"] or SP["activo"] or MB["activo"] or ART["activo"] or DISC["activo"]:
                 return self._send(409, {"error": "espera a que acabe la tarea en marcha"})
             UPD.update(activo=True, log=[], error=None, hecho=None)
             threading.Thread(target=_actualizar, daemon=True).start()
@@ -1030,7 +1078,7 @@ def _vigilar(srv):
     while True:
         time.sleep(10)
         u = VIDA["ultimo"]
-        if u and time.time() - u > VIDA["margen"] and not SP["activo"] and not MB["activo"] and not UPD["activo"] and not ART["activo"] and not SINC["activo"]:
+        if u and time.time() - u > VIDA["margen"] and not SP["activo"] and not MB["activo"] and not UPD["activo"] and not ART["activo"] and not DISC["activo"] and not SINC["activo"]:
             print("Ventana cerrada: apagando Chronify")
             srv.shutdown()
             return
