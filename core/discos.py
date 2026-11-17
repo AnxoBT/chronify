@@ -202,6 +202,9 @@ def calcular(P, cache, hoy=None):
     if albumes:
         cur.append({"t": "Discos de los que solo tienes una canción", "v": f"{round(100 * len(uno) / len(albumes))} %",
                     "d": f"{len(uno)} de {len(albumes)}"})
+    if con_pct:
+        cur.append({"t": "Lo que tienes de cada disco, de media", "v": f"{round(mean(d['pct'] for d in con_pct))} %",
+                    "d": f"{sum(d['n'] for d in con_pct)} de {sum(d['total'] for d in con_pct)} canciones"})
     if con_anio:
         viejo = min(con_anio, key=lambda d: (d["anio"], -d["n"]))
         nuevo = max(con_anio, key=lambda d: (d["anio"], d["n"]))
@@ -219,7 +222,9 @@ def calcular(P, cache, hoy=None):
                     "con_total": sum(1 for d in albumes if d["total"]),
                     "buscados": sum(1 for d in discos if d["buscado"])},
         "mas_canciones": [fila(d) for d in orden_n[:10]],
-        "mas_completos": [fila(d) for d in sorted((d for d in con_pct if d["n"] >= 2), key=lambda d: (-d["pct"], -d["n"], _k(d["disco"])))[:10]],
+        # a medias (los completos van aparte): los que tienes casi enteros, primero
+        "mas_completos": [fila(d) for d in sorted((d for d in con_pct if d["n"] >= 2 and d["pct"] < 100),
+                                                   key=lambda d: (-d["pct"], d["total"] - d["n"], _k(d["disco"])))[:10]],
         "completos": [fila(d) for d in completos[:12]],
         "largos": [fila(d) for d in por_ms[::-1][:5]],
         "cortos": [fila(d) for d in por_ms[:5]],

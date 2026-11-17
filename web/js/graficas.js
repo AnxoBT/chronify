@@ -94,8 +94,7 @@ function apiladas(cats, series, colores, {alto = 200, W = 800} = {}) {
 }
 
 // barras horizontales en HTML (rankings): items [{nombre, n, extra, tip}]
-function hbar(items, {color = "var(--acc)", valor = d => fmt(d.n)} = {}) {
-  const max = Math.max(1, ...items.map(d => d.n));
+function hbar(items, {color = "var(--acc)", valor = d => fmt(d.n), max = Math.max(1, ...items.map(d => d.n))} = {}) {
   return el("div", {className:"hb"}, ...items.flatMap(d => {
     const fila = [el("div", {className:"nom", title:d.nombre}, d.nombre, d.extra ? el("span", {className:"muted small"}, " " + d.extra) : ""),
       el("div", {}, el("div", {className:"bar", style:`width:${100 * d.n / max}%;background:${color}`})), el("div", {className:"num"}, valor(d))];

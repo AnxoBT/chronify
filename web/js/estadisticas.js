@@ -242,9 +242,11 @@ function tarjetasDiscos(d) {
   out.push(tarjeta("Discos de los que más canciones tienes", "Sin contar singles ni EP",
     hbar(d.mas_canciones.map(x => ({nombre:x.disco, n:x.n, total:x.total, extra:x.artista, tip:tips(x)})),
       {valor: x => x.total ? `${x.n}/${x.total}` : fmt(x.n)})));
-  out.push(tarjeta("Discos que tienes más completos", "Qué parte de cada disco tienes en la lista (discos de 5 canciones o más con dato de MusicBrainz, de los que tienes al menos 2)",
-    d.mas_completos.length ? hbar(d.mas_completos.map(x => ({nombre:x.disco, n:x.pct, extra:x.artista, tip:tips(x)})),
-      {color:"var(--s1)", valor: x => `${x.n} %`}) : el("div", {className:"muted small"}, aviso),
+  out.push(tarjeta("Cuánto te falta para completar cada disco", "Discos que tienes a medias, los más cerca de estar completos primero: 6/8 = tienes 6 de sus 8 canciones (discos de 5 canciones o más con dato de MusicBrainz, de los que tienes al menos 2)",
+    d.mas_completos.length ? hbar(d.mas_completos.map(x => ({nombre:x.disco, n:x.pct, extra:x.artista, tienes:x.n, total:x.total,
+      tip:[...tips(x), el("div", {}, x.total - x.n === 1 ? "Te falta 1 canción" : `Te faltan ${x.total - x.n} canciones`)]})),
+      {color:"var(--s1)", max:100, valor: x => `${x.n} % · ${x.tienes}/${x.total}`})
+      : el("div", {className:"muted small"}, sinDatos ? aviso : "Ninguno a medias"),
     el("div", {className:"sub", style:"margin-top:14px"}, `Discos completos (${fmt(r.completos)})`),
     lista(d.completos, x => `${x.total} canciones`, sinDatos ? "Sin datos todavía" : "Ninguno todavía")));
   out.push(tarjeta("Los discos más largos y más cortos", "Duración del disco entero (álbumes según MusicBrainz: sin singles, EP ni recopilatorios de varios artistas)",

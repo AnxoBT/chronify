@@ -1130,7 +1130,8 @@ class TestDiscos(unittest.TestCase):
         self.assertEqual([d["pct"] for d in s["mas_completos"]], [17])  # 2 de 12; Rumours no llega a 5 canciones
         self.assertEqual(s["por_decada"], [{"decada": "1970s", "n": 2}, {"decada": "2000s", "n": 1}])
         self.assertEqual(s["artistas"], [])  # Tusk es single: Fleetwood Mac solo tiene un disco
-        self.assertEqual(len(s["curiosidades"]), 4)
+        self.assertEqual(len(s["curiosidades"]), 5)
+        self.assertEqual(s["curiosidades"][1]["v"], "17 %")  # de media: solo los discos con porcentaje
         # sin nada buscado no se rompe y no hay porcentajes
         s = discos.calcular(self._cat(), {}, hoy=2026)
         self.assertEqual((s["resumen"]["con_total"], s["mas_completos"], s["largos"]), (0, [], []))

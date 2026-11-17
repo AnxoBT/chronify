@@ -1,5 +1,13 @@
 # Cambios
 
+## v1.3.0 — 2026-11-17
+
+- **Cuánto te falta para completar cada disco**: la tarjeta de discos a medias enseña el porcentaje y cuántas canciones
+  tienes de cuántas (p. ej. «75 % · 6/8»), los más cerca de estar completos primero, y al pasar por encima cuántas te
+  faltan. Los completos al 100 % van en su lista aparte.
+- Nueva curiosidad: lo que tienes de cada disco, de media.
+- Arreglado: en Windows, abrir Estadísticas mientras se buscaban discos en MusicBrainz podía dar error un instante.
+
 ## v1.2.0 — 2026-11-17
 
 - **Tus discos** en Estadísticas: los discos de los que más canciones tienes, los que tienes más completos (y los

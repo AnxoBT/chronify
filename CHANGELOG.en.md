@@ -2,6 +2,14 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.3.0 — 2026-11-17
+
+- **How close you are to completing each album**: the card of albums you have part of shows the percentage and how many
+  songs you have out of how many (e.g. "75 % · 6/8"), closest to complete first, and on hover how many are missing.
+  Albums at 100 % are in their own list.
+- New fun fact: how much of each album you have, on average.
+- Fixed: on Windows, opening Statistics while albums were being looked up on MusicBrainz could fail for a moment.
+
 ## v1.2.0 — 2026-11-17
 
 - **Your albums** in Statistics: the albums you have the most songs from, the ones you have most of (and the complete

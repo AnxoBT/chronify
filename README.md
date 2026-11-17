@@ -122,6 +122,8 @@ you about new versions by itself.
 | Sort: copy and paste in Spotify desktop | ✓ (the "date added" becomes today) | ✓ |
 | Sort/fix directly in Spotify, keeping "date added" | | ✓ |
 | Read playlists without Exportify | | ✓ |
+| Create playlists, add or remove songs (duplicates, swap a version for the original) from the app | | ✓ |
+| Popularity and other song data | ✓ (come in the Exportify zip) | ✓ |
 
 Spotify only lets apps whose owner has Premium use its API (development mode, since February 2026), so each
 person creates their own free Spotify app (5 minutes):
@@ -304,6 +306,8 @@ por sí sola cuando hay versión nueva.
 | Ordenar copiando y pegando en Spotify del PC | ✓ (la fecha de añadido pasa a ser hoy) | ✓ |
 | Ordenar y arreglar directamente en Spotify, conservando la fecha de añadido | | ✓ |
 | Leer las listas sin Exportify | | ✓ |
+| Crear listas, añadir o quitar canciones (repetidas, cambiar una versión por la original) desde la app | | ✓ |
+| Popularidad y demás datos de cada canción | ✓ (vienen en el zip de Exportify) | ✓ |
 
 Spotify solo deja usar su API a apps cuyo dueño tiene Premium (modo desarrollo, desde febrero de 2026), así que cada
 persona crea su propia app de Spotify, gratis (5 minutos):
