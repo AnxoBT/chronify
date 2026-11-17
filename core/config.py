@@ -129,10 +129,17 @@ def guardar_fechas(data):
     tmp.replace(FECHAS)
 
 
+def _en_cache(name):
+    """Ruta de un archivo de la caché: solo un nombre simple, nunca otra carpeta (defensa extra)."""
+    if not name or name != Path(name).name or name in (".", ".."):
+        raise ValueError(f"Nombre de caché no válido: {name!r}")
+    return CACHE / name
+
+
 def cache_json(name, default=None):
-    return _read_json(CACHE / name, {} if default is None else default)
+    return _read_json(_en_cache(name), {} if default is None else default)
 
 
 def save_cache(name, data):
     CACHE.mkdir(exist_ok=True)
-    _write_json(CACHE / name, data)
+    _write_json(_en_cache(name), data)
