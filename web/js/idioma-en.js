@@ -8,6 +8,8 @@ exactos: {
   "Esperar conexión (2 min)": "Wait for connection (2 min)",
   "Conectar a": "Connect to",
   "código": "code",
+  "zip no válido": "invalid zip",
+  "operación desconocida": "unknown operation",
   "Sincronizar": "Sync",
   "Dirección": "Address",
   "Código": "Code",
@@ -749,7 +751,6 @@ patrones: [
   ["^original: «(.+)» \\((\\S+), single (\\S+)\\)$", "original: “$1” ($2, single $3)"],
   ["^original: «(.+)» \\((\\S+)\\)$", "original: “$1” ($2)"],
   ["^→ en Spotify: (.+) \\((.+)\\)$", "→ on Spotify: $1 ($2)"],
-  ["^(.+): ([\\d.,]+) canciones…$", "$1: $2 songs…"],
   ["^Escríbelos en el otro dispositivo · quedan (\\d+) s$", "Type them on the other device · $1 s left"],
   ["^aquí: (.+) · allí: (.+)$", "here: $1 · there: $2"],
   ["^Instalar Chronify v(.+)$", "Install Chronify v$1"],
@@ -1206,4 +1207,7 @@ patrones: [
   ["^en ([A-Za-z]:\\\\.*|/.*)$", "in $1"],
   ["^([\\d.,]+) \\((\\d+) %\\)$", "$1 ($2%)"],
   ["^([\\d.,]+) %$", "$1%"],
+  // los más generales, al final (si no, tapan a los que tienen más texto fijo)
+  ["^(.+): 1 canción…$", "$1: 1 song…"],
+  ["^(.+): ([\\d.,]+) canciones…$", "$1: $2 songs…"],
 ]};

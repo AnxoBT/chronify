@@ -780,7 +780,7 @@ class TestLikedEnListaNueva(unittest.TestCase):
             llamadas.append((metodo, ruta, len((cuerpo or {}).get("uris", []))))
             return {"id": "nueva"}
         ids = [f"t{i}" for i in range(250)]
-        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: [{"id": "vieja"}]):
+        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: [{"id": "vieja", "name": "X"}]):
             self.assertEqual(spotify.crear_o_rellenar("X", ids, None), "nueva")
             self.assertEqual(llamadas, [("POST", "/me/playlists", 0), ("POST", "/playlists/nueva/items", 100),
                                         ("POST", "/playlists/nueva/items", 100), ("POST", "/playlists/nueva/items", 50)])
@@ -947,7 +947,65 @@ class TestListasCreadas(unittest.TestCase):
                 listas, _ = exportify.cargar(["mis_FAVORITAS"], "", [])  # mismo nombre escrito distinto
         self.assertNotIn("Mis favoritas", listas)
 
-    def test_endpoint_antiguo_solo_si_no_existe(self):
+    def test_ignoradas_con_nombres_de_antes_y_por_id(self):
+        from unittest import mock
+        from core import config, spotify
+        from web import server as S
+        creadas = {"Liked_Songs": {"id": "c1", "nombre": "Liked Songs · by date", "antes": ["Canciones que te gustan · por fecha"]}}
+        with mock.patch.object(config, "cache_json", lambda n, d=None: creadas if n == S.CREADAS else {}), \
+                mock.patch.object(config, "rules", lambda: {"ignorar": ["Saved_Albums"]}):
+            self.assertEqual(S.ignoradas(), ["Saved_Albums", "Liked Songs · by date", "Canciones que te gustan · por fecha"])
+            self.assertEqual(S.ignoradas_ids(), {"c1"})
+        # por la API, la creada no se lee aunque la hayas renombrado en Spotify (Estadísticas no la cuenta)
+        mias = [{"id": "p1", "name": "Mix", "owner": {"id": "yo"}, "snapshot_id": "s"},
+                {"id": "c1", "name": "Mi copia", "owner": {"id": "yo"}, "snapshot_id": "s"}]
+        leidas = []
+
+        def lectura(fuentes, progreso=None):
+            leidas.extend(n for n, _, _ in fuentes)
+            return {n: [] for n, _, _ in fuentes}, len(fuentes)
+        with mock.patch.object(spotify, "yo", lambda: {"id": "yo"}), mock.patch.object(spotify, "mis_listas", lambda: mias), \
+                mock.patch.object(spotify, "_lectura_incremental", lectura):
+            listas, _ = spotify.cargar(["Saved_Albums"], ["Liked_Songs"], ignorar_ids={"c1"})
+        self.assertEqual(sorted(listas), ["Liked_Songs", "Mix"])
+        self.assertNotIn("Mi copia", leidas)
+
+    def test_crear_ordenada_en_otro_idioma_renombra(self):
+        from unittest import mock
+        from core import config, spotify
+        from web import server as S
+        llamadas, guardado = [], {}
+        mias = [{"id": "c1", "name": "Canciones que te gustan · por fecha"}]
+
+        def call(m, ruta, cuerpo=None, params=None):
+            llamadas.append((m, ruta, cuerpo))
+            return {"id": "nueva"}
+        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: mias):
+            pid = spotify.crear_o_rellenar("Liked Songs · by date", ["a", "b"], "c1", "Sorted")
+            self.assertEqual(pid, "c1")
+            self.assertIn(("PUT", "/playlists/c1", {"name": "Liked Songs · by date", "description": "Sorted"}), llamadas)
+            llamadas.clear()
+            spotify.crear_o_rellenar("Canciones que te gustan · por fecha", ["a"], "c1")  # mismo nombre: no se renombra
+            self.assertEqual([r for _, r, _ in llamadas], ["/playlists/c1/items"])
+        # el servidor la guarda con el nombre nuevo y recuerda el viejo (zip de Exportify anterior)
+        o = {"clave": "Liked_Songs", "lista": "Liked_Songs", "en_lista_nueva": True, "orden": ["a", "b"]}
+        previas = {"Liked_Songs": {"id": "c1", "nombre": "Canciones que te gustan · por fecha"}}
+        with mock.patch.object(S.analisis, "ordenar", lambda *a: [o]), \
+                mock.patch.object(spotify, "cupo", lambda: {"libres": 100}), \
+                mock.patch.object(spotify, "crear_o_rellenar", lambda nombre, ids, pid=None, d="": pid), \
+                mock.patch.object(config, "cache_json", lambda n, d=None: previas if n == S.CREADAS else {}), \
+                mock.patch.object(config, "save_cache", lambda n, v: guardado.update({n: v})), \
+                mock.patch.object(S.historial, "registrar", lambda *a, **k: None):
+            r = S._crear_ordenada("Liked_Songs", "en")(lambda m: None)
+        self.assertEqual(r["nombre"], "Liked Songs · by date")
+        self.assertEqual(guardado[S.CREADAS]["Liked_Songs"], {"id": "c1", "nombre": "Liked Songs · by date",
+                                                              "antes": ["Canciones que te gustan · por fecha"]})
+
+
+class TestEndpointAlternativo(unittest.TestCase):
+    """POST /me/playlists → /users/{id}/playlists solo si el primero no se puede usar; los demás errores, tal cual."""
+
+    def _crear(self, error):
         from unittest import mock
         from core import spotify
         llamadas = []
@@ -955,12 +1013,56 @@ class TestListasCreadas(unittest.TestCase):
         def call(m, ruta, cuerpo=None, params=None):
             llamadas.append(ruta)
             if ruta == "/me/playlists" and m == "POST":
-                raise RuntimeError("Spotify POST /me/playlists: 500 error")
+                raise error
             return {"id": "n"}
-        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: []):
-            with self.assertRaises(RuntimeError):  # un 500 no es "no existe": no se prueba el otro
+        with mock.patch.object(spotify, "call", call), mock.patch.object(spotify, "mis_listas", lambda: []), \
+                mock.patch.object(spotify, "yo", lambda: {"id": "yo"}):
+            try:
                 spotify.crear_o_rellenar("X", ["a"])
-        self.assertNotIn("/users/", " ".join(llamadas))
+            finally:
+                self.usado = "/users/yo/playlists" in llamadas
+
+    def test_endpoint_que_no_vale(self):
+        from core import spotify
+        for codigo in (403, 404, 405, 410):
+            with self.subTest(codigo=codigo):
+                self._crear(spotify.SpotifyHTTP(codigo, f"Spotify POST /me/playlists: {codigo} x"))
+                self.assertTrue(self.usado)
+
+    def test_errores_reales_no_pasan_al_otro(self):
+        from core import spotify
+        errores = [spotify.SpotifyHTTP(c, f"Spotify POST /me/playlists: {c} x") for c in (400, 401, 500, 502, 503)]
+        errores += [spotify.SpotifyBloqueado("bloqueado"), spotify.SpotifyCupo("cupo"),
+                    spotify.SpotifyNoDisponible(spotify.SIN_PREMIUM), RuntimeError("Spotify POST /me/playlists: 404 x")]
+        for e in errores:
+            with self.subTest(error=str(e)):
+                with self.assertRaises(type(e)):
+                    self._crear(e)
+                self.assertFalse(self.usado)
+
+    def test_call_da_el_codigo(self):
+        import io
+        from unittest import mock
+        from urllib.error import HTTPError
+        from core import spotify
+
+        def falla(codigo, texto):
+            def abrir(req, *a, **k):
+                raise HTTPError(req.full_url, codigo, "x", {}, io.BytesIO(texto.encode()))
+            return abrir
+        with mock.patch.object(spotify, "bloqueado_hasta", lambda: None), \
+                mock.patch.object(spotify, "cupo", lambda: {"libres": 100}), \
+                mock.patch.object(spotify, "_apuntar_escritura", lambda: None), \
+                mock.patch.object(spotify, "_token", lambda: "t"), mock.patch.dict(spotify.PAUSA, {"GET": 0, "escritura": 0}):
+            for codigo, texto, tipo in ((403, "Forbidden", spotify.SpotifyHTTP), (404, "Not found", spotify.SpotifyHTTP),
+                                        (401, "The access token expired", spotify.SpotifyHTTP),
+                                        (403, "Active premium subscription required", spotify.SpotifyNoDisponible)):
+                with self.subTest(codigo=codigo, texto=texto), mock.patch.object(spotify, "_abrir", falla(codigo, texto)), \
+                        mock.patch.object(spotify, "save_cache", lambda *a: None):
+                    with self.assertRaises(tipo) as cm:
+                        spotify.call("POST", "/me/playlists", {})
+                    self.assertEqual(spotify._endpoint_no_vale(cm.exception), codigo in (403, 404) and tipo is spotify.SpotifyHTTP)
+                    self.assertIn(str(codigo) if tipo is spotify.SpotifyHTTP else "Premium", str(cm.exception))
 
 
 class TestHistorial(unittest.TestCase):

@@ -190,7 +190,7 @@ def _probar(log):
 def _leer(log):
     from core import spotify
     R = config.rules()
-    listas, cat = spotify.cargar(ignoradas(), R.get("solo_lectura", []), progreso=log)
+    listas, cat = spotify.cargar(ignoradas(), R.get("solo_lectura", []), progreso=log, ignorar_ids=ignoradas_ids())
     try:  # la API ya no da géneros ni características de audio: se toman del último zip de Exportify si lo hay
         _, cat_csv = exportify.cargar(R.get("ignorar", []), R.get("mix", ""), R.get("solo_lectura", []))
         campos = ("generos", "sello", "bpm", "energia", "bailable", "tono", "modo", "valencia", "acustica", "habla",
@@ -247,14 +247,26 @@ def _cambiar_lista(tid, desde, hacia):
 
 
 def creadas():
-    """{lista: {"id", "nombre"}} de las listas que ha creado Chronify (p. ej. Liked por fecha)."""
+    """{lista: {"id", "nombre", "antes"}} de las listas que ha creado Chronify (p. ej. Liked por fecha); "antes" =
+    nombres que tuvo (otro idioma de la app), por si un zip de Exportify viejo aún la trae con ese nombre."""
     return {k: (v if isinstance(v, dict) else {"id": v, "nombre": ""}) for k, v in config.cache_json(CREADAS).items()}
 
 
 def ignoradas():
-    """Listas que no se leen: las de Ajustes y las que crea Chronify (son copias: contarían dos veces las canciones)."""
+    """Listas que no se leen: las de Ajustes y las que crea Chronify (son copias: contarían dos veces las canciones
+    en Estadísticas y en las comprobaciones)."""
     R = config.rules()
-    return [*(R.get("ignorar") or []), *(c["nombre"] for c in creadas().values() if c.get("nombre"))]
+    vistos, out = set(), []
+    for n in [*(R.get("ignorar") or []), *(n for c in creadas().values() for n in [c.get("nombre"), *(c.get("antes") or [])])]:
+        if n and n not in vistos:
+            vistos.add(n)
+            out.append(n)
+    return out
+
+
+def ignoradas_ids():
+    """Ids de Spotify de las listas que ha creado Chronify (no se leen aunque las renombres)."""
+    return {c["id"] for c in creadas().values() if c.get("id")}
 
 
 def _crear_ordenada(clave, idioma="es"):
@@ -265,19 +277,21 @@ def _crear_ordenada(clave, idioma="es"):
         o = next((o for o in analisis.ordenar(ESTADO["listas"], ESTADO["cat"]) if o["clave"] == clave), None)
         if not o or not o["en_lista_nueva"]:
             raise ValueError("Esa lista no se ordena en una lista nueva (Ajustes → Tus listas)")
-        falta = 2 + len(o["orden"]) // 100
+        falta = 3 + len(o["orden"]) // 100  # crear o renombrar + rellenar
         if spotify.cupo()["libres"] < falta:
             raise ValueError(spotify._msg_cupo(spotify.cupo()))
         en = idioma == "en"
         base = ("Liked Songs" if en else "Canciones que te gustan") if o["lista"] == "Liked_Songs" else o["lista"]
         nombre = base + (" · by date" if en else " · por fecha")
         previas = creadas()
-        log(f"{nombre}: {len(o['orden'])} canciones…")
+        log(f"{nombre}: {len(o['orden'])} {'canción' if len(o['orden']) == 1 else 'canciones'}…")
         pid = spotify.crear_o_rellenar(nombre, o["orden"], (previas.get(clave) or {}).get("id"),
                                        "Sorted by the real release date of every song (Chronify)" if en
                                        else "Ordenada por la fecha real de cada canción (Chronify)")
-        nueva = (previas.get(clave) or {}).get("id") != pid
-        config.save_cache(CREADAS, {**previas, clave: {"id": pid, "nombre": nombre}})
+        antes = previas.get(clave) or {}
+        nueva = antes.get("id") != pid
+        viejos = [] if nueva else [n for n in [*(antes.get("antes") or []), antes.get("nombre")] if n and n != nombre]
+        config.save_cache(CREADAS, {**previas, clave: {"id": pid, "nombre": nombre, **({"antes": viejos} if viejos else {})}})
         log(f"{nombre}: {'creada' if nueva else 'actualizada'} en Spotify")
         historial.registrar("spotify", f"{nombre}: {'creada' if nueva else 'actualizada'} ({len(o['orden'])} canciones)")
         return {"id": pid, "nombre": nombre}

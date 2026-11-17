@@ -6,7 +6,6 @@ pero leer y reordenar listas propias sigue disponible. El token se guarda en cac
 import base64
 import hashlib
 import json
-import re
 import secrets
 import time
 import bisect
@@ -53,6 +52,24 @@ class SpotifyNoDisponible(RuntimeError):
 
 class SpotifyCupo(RuntimeError):
     """Se ha llegado al límite diario propio de escrituras (no es un bloqueo de Spotify)."""
+
+
+class SpotifyHTTP(RuntimeError):
+    """Error HTTP de la Web API sin aviso propio; 'codigo' = estado HTTP (el mensaje sigue siendo el de siempre)."""
+
+    def __init__(self, codigo, mensaje):
+        super().__init__(mensaje)
+        self.codigo = codigo
+
+
+# Estados que dicen que un endpoint no se puede usar (no existe, retirado o restringido para esta app): solo con
+# estos se prueba el endpoint alternativo. 401 (sesión), 429 (bloqueo), 5xx y los 403 de cuenta (sin Premium, no
+# autorizada: SpotifyNoDisponible) siguen con su propio aviso y nunca pasan al alternativo.
+ENDPOINT_NO_VALE = (403, 404, 405, 410)
+
+
+def _endpoint_no_vale(e):
+    return isinstance(e, SpotifyHTTP) and e.codigo in ENDPOINT_NO_VALE
 
 
 def _escrituras():
@@ -196,7 +213,7 @@ def call(method, path, body=None, params=None):
             if e.code == 403 and _no_disponible(texto):
                 save_cache(CUENTA_CACHE, {"premium": None, "error": _no_disponible(texto), "t": time.time()})
                 raise SpotifyNoDisponible(_no_disponible(texto))
-            raise RuntimeError(f"Spotify {method} {path}: {e.code} {texto}")
+            raise SpotifyHTTP(e.code, f"Spotify {method} {path}: {e.code} {texto}")
 
 
 def _no_disponible(texto):
@@ -336,15 +353,16 @@ def _lectura_incremental(fuentes, progreso=None):
     return out, leidas
 
 
-def cargar(ignorar=(), solo_lectura=(), progreso=None):
+def cargar(ignorar=(), solo_lectura=(), progreso=None, ignorar_ids=()):
     """Como exportify.cargar() pero leyendo de Spotify. Las listas de otros usuarios ni se abren.
+    'ignorar_ids': listas que no se leen aunque las hayas renombrado (las que crea Chronify).
     Solo se descargan las listas que han cambiado desde la última lectura (cache/spotify_listas.json)."""
     from core.exportify import Lista, Pista
     yo_id = yo()["id"]
     listas, catalogo = {}, {}
     fuera = {norm(n) for n in ignorar}
     propias = [pl for pl in mis_listas() if pl and (pl.get("owner") or {}).get("id") == yo_id
-               and norm(pl.get("name") or "") not in fuera]
+               and norm(pl.get("name") or "") not in fuera and pl.get("id") not in ignorar_ids]
     fuentes = [(pl["name"], pl["id"], pl.get("snapshot_id")) for pl in propias]
     if norm("Liked_Songs") not in fuera:  # canciones que te gustan: siempre de solo lectura
         fuentes.append(("Liked_Songs", None, None))
@@ -367,18 +385,22 @@ def cargar(ignorar=(), solo_lectura=(), progreso=None):
 
 def crear_o_rellenar(nombre, ids, pid=None, descripcion=""):
     """Lista propia con esas canciones en ese orden (p. ej. Liked por fecha). Si 'pid' es una lista tuya que sigue
-    existiendo, la reemplaza; si no, crea una privada. Escrituras: 1 + una por cada 100 canciones. Devuelve su id."""
+    existiendo, la reemplaza (y le pone 'nombre' si tenía otro); si no, crea una privada. Escrituras: 2 + una por cada
+    100 canciones como mucho. Devuelve su id."""
     uris = [f"spotify:track:{t}" for t in ids]
-    if pid and pid not in {pl["id"] for pl in mis_listas() if pl}:
+    mias = {pl["id"]: pl for pl in mis_listas() if pl}
+    if pid and pid not in mias:
         pid = None  # la borraste: se crea otra
     if pid:
+        if mias[pid].get("name") != nombre:  # p. ej. la app está ahora en otro idioma: 1 escritura más
+            call("PUT", f"/playlists/{pid}", {"name": nombre, "description": descripcion})
         call("PUT", f"/playlists/{pid}/items", {"uris": uris[:100]})  # reemplaza todo con las 100 primeras
     else:
         cuerpo = {"name": nombre, "public": False, "description": descripcion}
         try:
             pid = call("POST", "/me/playlists", cuerpo)["id"]
-        except RuntimeError as e:  # solo si este endpoint no existe: entonces el antiguo
-            if not re.search(r": (404|405) ", str(e)):
+        except SpotifyHTTP as e:  # solo si este endpoint no se puede usar: entonces el antiguo
+            if not _endpoint_no_vale(e):
                 raise
             pid = call("POST", f"/users/{yo()['id']}/playlists", cuerpo)["id"]
         if uris:
