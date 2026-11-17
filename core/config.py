@@ -1,6 +1,8 @@
 """Configuración: .env, rutas, reglas (rules.json) y fechas verificadas (fechas.json)."""
 import json
 import os
+import threading
+import time
 import unicodedata
 from pathlib import Path
 
@@ -86,14 +88,27 @@ def norm(nombre):
     return " ".join(s.replace("_", " ").casefold().split())
 
 
+def _reintentar(f, veces=20):
+    """En Windows, leer o sustituir un archivo justo mientras otro hilo lo sustituye da PermissionError un instante
+    (p. ej. la página leyendo la caché de MusicBrainz mientras la búsqueda en segundo plano la guarda)."""
+    for i in range(veces):
+        try:
+            return f()
+        except PermissionError:
+            if i == veces - 1:
+                raise
+            time.sleep(0.05)
+
+
 def _read_json(p, default):
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else default
+    return _reintentar(lambda: json.loads(p.read_text(encoding="utf-8")) if p.exists() else default)
 
 
 def _write_json(p, data, indent=None):
-    tmp = p.with_suffix(p.suffix + ".tmp")
+    # temporal único por hilo: dos hilos guardando a la vez no se pisan el .tmp
+    tmp = p.with_suffix(f"{p.suffix}.{threading.get_ident()}.tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=indent), encoding="utf-8")
-    tmp.replace(p)  # escritura atómica: si se corta no deja el archivo a medias
+    _reintentar(lambda: tmp.replace(p))  # escritura atómica: si se corta no deja el archivo a medias
 
 
 def rules():

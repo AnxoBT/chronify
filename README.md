@@ -45,14 +45,23 @@
 
 <p align="center">
   <img src="docs/screenshots/en_summary.png" width="32%" alt="Summary">
+  <img src="docs/screenshots/en_checks.png" width="32%" alt="Checks">
   <img src="docs/screenshots/en_sort.png" width="32%" alt="Sort">
-  <img src="docs/screenshots/en_stats.png" width="32%" alt="Statistics">
 </p>
+<p align="center">
+  <img src="docs/screenshots/en_dates.png" width="32%" alt="Dates">
+  <img src="docs/screenshots/en_stats.png" width="32%" alt="Statistics">
+  <img src="docs/screenshots/en_albums.png" width="32%" alt="Album statistics">
+</p>
+<p align="center"><sub>Screenshots made with sample playlists of well-known songs.</sub></p>
 
 <details>
-<summary><b>Statistics tour (GIF)</b></summary>
+<summary><b>Tour of the app (GIF)</b></summary>
 <br>
-<p align="center"><img src="docs/screenshots/en_stats_scroll.gif" width="80%" alt="Scrolling through the statistics"></p>
+<p align="center">
+  <img src="docs/screenshots/en_tour.gif" width="49%" alt="Tour of the app (GIF)">
+  <img src="docs/screenshots/en_stats_scroll.gif" width="49%" alt="Scrolling through the statistics">
+</p>
 </details>
 
 ### Features
@@ -218,14 +227,23 @@ released under the same licence, with its source code.
 
 <p align="center">
   <img src="docs/screenshots/es_summary.png" width="32%" alt="Resumen">
+  <img src="docs/screenshots/es_checks.png" width="32%" alt="Comprobaciones">
   <img src="docs/screenshots/es_sort.png" width="32%" alt="Ordenar">
-  <img src="docs/screenshots/es_stats.png" width="32%" alt="Estadísticas">
 </p>
+<p align="center">
+  <img src="docs/screenshots/es_dates.png" width="32%" alt="Fechas">
+  <img src="docs/screenshots/es_stats.png" width="32%" alt="Estadísticas">
+  <img src="docs/screenshots/es_albums.png" width="32%" alt="Estadísticas de discos">
+</p>
+<p align="center"><sub>Capturas hechas con listas de ejemplo de canciones conocidas.</sub></p>
 
 <details>
-<summary><b>Recorrido por las estadísticas (GIF)</b></summary>
+<summary><b>Recorrido por la app (GIF)</b></summary>
 <br>
-<p align="center"><img src="docs/screenshots/es_stats_scroll.gif" width="80%" alt="Recorrido por las estadísticas"></p>
+<p align="center">
+  <img src="docs/screenshots/es_tour.gif" width="49%" alt="Recorrido por la app (GIF)">
+  <img src="docs/screenshots/es_stats_scroll.gif" width="49%" alt="Recorrido por las estadísticas">
+</p>
 </details>
 
 ### Funciones
