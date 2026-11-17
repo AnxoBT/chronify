@@ -2,6 +2,15 @@
 
 English version of `CHANGELOG.md` (shown in the app's "What's new" window when the interface is in English).
 
+## v1.1.1 — 2026-11-17
+
+- The "Liked Songs · by date" playlist is renamed on Spotify when you change the app's language, and the playlists
+  Chronify creates don't count in Statistics even if you rename them or an old zip has their previous name.
+- Creating playlists on Spotify only uses the alternative method when the normal one isn't available; session, rate
+  limit and Spotify server errors are reported as they are.
+- More messages translated into English (sync and Wi-Fi errors, song counter).
+- Security: a policy to report problems privately and automatic dependency alerts.
+
 ## v1.1.0 — 2026-11-16
 
 - **Right version**: in Checks, live, remixed, compilation and reissued songs show the original album (from MusicBrainz,

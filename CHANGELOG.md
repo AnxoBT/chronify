@@ -1,5 +1,14 @@
 # Cambios
 
+## v1.1.1 — 2026-11-17
+
+- La lista "Canciones que te gustan · por fecha" se renombra en Spotify al cambiar el idioma de la app, y las listas
+  que crea Chronify no cuentan en Estadísticas aunque las renombres o vengan con su nombre anterior en un zip viejo.
+- Crear listas en Spotify usa el método alternativo solo cuando el normal no está disponible; los errores de sesión,
+  de límite o del servidor de Spotify se avisan tal cual.
+- Más avisos traducidos al inglés (errores de sincronización y por Wi-Fi, contador de canciones).
+- Seguridad: política para avisar de fallos en privado y avisos automáticos de dependencias.
+
 ## v1.1.0 — 2026-11-16
 
 - **Versión buena**: en Comprobaciones, las canciones en directo, remezcladas, de recopilatorio o reediciones dicen cuál es

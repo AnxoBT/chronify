@@ -75,6 +75,12 @@ browser ([Pyodide](https://pyodide.org)); the first visit downloads ~13 MB once 
 Your data stays on your device: in the browser (web), in the program folder (desktop) or in the app (Android).
 Desktop and Android can be synced with a USB cable.
 
+**Automatic updates on Android (optional)**: add it to [Obtainium](https://github.com/ImranR98/Obtainium)
+and every new release installs straight from GitHub, without looking for the APK. The app also tells
+you about new versions by itself.
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/AnxoBT/chronify"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Get it on Obtainium"></a>
+
 ### Getting started
 
 1. **Load your playlists**, either way:
@@ -229,6 +235,12 @@ Todas son la misma app con las mismas funciones. La web ejecuta el mismo código
 ([Pyodide](https://pyodide.org)); la primera vez descarga ~13 MB (desde la propia web, verificados al generarla) y después funciona también sin conexión. Tus datos se
 quedan en tu dispositivo: en el navegador (web), en la carpeta del programa (escritorio) o en la app (Android). El PC
 y el móvil Android se sincronizan por cable USB.
+
+**Actualizaciones automáticas en Android (opcional)**: añádela a [Obtainium](https://github.com/ImranR98/Obtainium)
+y cada versión nueva se instala directamente desde GitHub, sin buscar el APK. La app también avisa
+por sí sola cuando hay versión nueva.
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/AnxoBT/chronify"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Consíguela en Obtainium"></a>
 
 ### Primeros pasos
 
